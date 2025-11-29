@@ -1,24 +1,19 @@
-use std::isize;
-
 use crate::data::edge::Edge;
 
 #[derive(Debug)]
 pub struct Vertex {
     pub id: usize,
-    pub label: isize,
-    pub v_type: isize,
+    pub label: usize,
+    pub vertex_type: usize,
     pub edges: Vec<Edge>,
 }
 
 impl Vertex {
-    pub fn new(id: usize, label: Option<isize>, v_type: Option<isize>) -> Vertex {
+    pub fn new(id: usize, label: Option<usize>, v_type: Option<usize>) -> Vertex {
         Vertex {
             id,
-            label: match label {
-                None => 0,
-                Some(label) => label,
-            },
-            v_type: v_type.unwrap_or(0),
+            label: label.unwrap_or_default(),
+            vertex_type: v_type.unwrap_or(0),
             edges: Vec::with_capacity(8),
         }
     }
@@ -28,11 +23,11 @@ impl Vertex {
     }
 
     pub fn to_str_repr(&self) -> String {
-        vec![
+        [
             "v".to_string(),
             self.id.to_string(),
             self.label.to_string(),
-            self.v_type.to_string(),
+            self.vertex_type.to_string(),
         ]
         .join(" ")
     }
@@ -40,7 +35,7 @@ impl Vertex {
 
 impl PartialEq for Vertex {
     fn eq(&self, other: &Self) -> bool {
-        self.label == other.label && self.v_type == other.v_type
+        self.label == other.label && self.vertex_type == other.vertex_type
     }
 }
 
@@ -59,7 +54,7 @@ mod tests {
         let mut v1 = Vertex::new(1, Some(2), Some(3));
         assert_eq!(v1.edges.len(), 0);
         assert_eq!(v1.label, 2);
-        assert_eq!(v1.v_type, 3);
+        assert_eq!(v1.vertex_type, 3);
         v1.push(2, 2);
         assert_eq!(v1.edges.len(), 1);
         let e = v1.edges.pop().unwrap();

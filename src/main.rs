@@ -36,18 +36,18 @@ struct Args {
 
     /// Activity vertex type
     #[arg(long, default_value_t = 0)]
-    activity_node_type: usize,
+    activity_vertex_type: usize,
 
-    /// Object nodes vertex types
+    /// Object vertex types
     #[arg(long, num_args = 0..)]
-    object_node_types: Vec<usize>,
+    object_vertex_types: Vec<usize>,
 
     /// Minimum number of main vertices
-    #[arg(long, default_value_t = 1)]
+    #[arg(long, default_value_t = 4)]
     min_vertices: usize,
 
     /// Maximum number of the main vertices
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 5)]
     max_vertices: usize,
 }
 
@@ -69,17 +69,18 @@ fn main() {
     let _graphs = graphs.unwrap();
     let cpd_config = CPDConfig::new(
         AlgoCandidateGeneration::FullyConnected {
-            activity_node_type: args.activity_node_type,
-            object_node_types: args.object_node_types,
+            activity_vertex_type: args.activity_vertex_type,
+            object_vertex_types: args.object_vertex_types,
+            min_number_of_activity_vertices: args.min_vertices,
+            max_number_of_activity_vertices: args.max_vertices,
         },
         AlgoPatternMatching::CosineSimilarity { alpha: 0.5f32 },
     );
 
     cpd_config.run(&_graphs);
     println!("Mining subgraphs..");
-    todo!();
-    let delta = _now.elapsed().as_millis();
+    let _delta = _now.elapsed().as_millis();
     println!("Finished.");
     // println!("Found {} subgraphs", subgraphs);
-    println!("Took {}ms", delta);
+    println!("Took {}ms", _delta);
 }

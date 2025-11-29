@@ -19,7 +19,7 @@ impl Edge {
         }
     }
     pub fn to_str_repr(&self) -> String {
-        vec![
+        [
             "e".to_string(),
             self.from.to_string(),
             self.to.to_string(),
