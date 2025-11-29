@@ -1,0 +1,19 @@
+[package]
+name = "cpd"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
+license = "MIT"
+description = "A tool to search frequent subgraphs in a graph database"
+readme = "Readme.md"
+repository = "https://github.com/joleaf/cpd.rust"
+keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph']
+categories = ["algorithms", "command-line-utilities"]
+
+[dependencies]
+clap = { version = "4.5.53", features = ["derive"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
