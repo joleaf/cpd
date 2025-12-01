@@ -7,8 +7,8 @@ pub mod data;
 
 use clap::Parser;
 use cpd::{
-    candidate_generation::AlgoCandidateGeneration, candidate_matching::AlgoCandidateMatching,
-    config::CPDConfig, graph_matching::AlgoGraphMatching,
+    candidate_generation::AlgoCandidateGeneration, config::CPDConfig,
+    graph_matching::AlgoGraphMatching,
 };
 
 /// Fast Rust implementation for gSpan
@@ -19,8 +19,9 @@ struct Args {
     #[arg(short, long)]
     input: String,
 
-    /// Output file for the resulting subgraphs
-    #[arg(short, long, default_value = "out.txt")]
+    /// Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be printed to the
+    /// console after processing finished with ######
+    #[arg(short, long, default_value = "stdout")]
     output: String,
 
     /// Min exact support
@@ -76,14 +77,29 @@ fn main() {
             min_number_of_activity_vertices: args.min_vertices,
             max_number_of_activity_vertices: args.max_vertices,
         },
-        AlgoCandidateMatching::Naive {
-            algo_graph_matching: AlgoGraphMatching::CosineSimilarity { alpha: 0.5f32 },
+        AlgoGraphMatching::CosineSimilarity {
+            alpha: 0.5f32,
+            matching_threshold: args.relaxed_threshold,
         },
+        args.support_exact,
+        args.support_relaxed,
     );
-    println!("Mining subgraphs..");
-    cpd_config.run(&graphs);
+    println!("Mining patterns..");
+    let patterns = cpd_config.run(&graphs);
     let delta = now.elapsed().as_millis();
-    println!("Finished. Total: {delta}ms");
-    // println!("Found {} subgraphs", subgraphs);
-    // TODO: Export patterns
+    println!(
+        "Finished. Final patterns: {}; took {delta}ms",
+        patterns.len()
+    );
+    println!("#######");
+    if args.output == "stdout" {
+        for g in patterns.iter() {
+            println!(
+                "{}",
+                g.pattern
+                    .to_str_repr(Some(g.frequency_exact), Some(g.frequency_relaxed))
+            );
+        }
+    } else {
+    }
 }

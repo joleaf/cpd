@@ -1,6 +1,6 @@
 use crate::data::edge::Edge;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Vertex {
     pub id: usize,
     pub label: usize,

@@ -16,7 +16,7 @@ impl fmt::Display for GraphSetParseError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Graph {
     pub id: usize,
     pub vertices: Vec<Vertex>,
@@ -91,8 +91,11 @@ impl Graph {
                                         current_graph = Graph::new(id);
                                         if id != graph_id {
                                             return Err(GraphSetParseError {
-                                                    message: format!("Graph with graph id {}, it should have the id {}", id, graph_id),
-                                                });
+                                                message: format!(
+                                                    "Graph with graph id {}, it should have the id {}",
+                                                    id, graph_id
+                                                ),
+                                            });
                                         }
                                         graph_id += 1;
                                     }
@@ -117,8 +120,13 @@ impl Graph {
                                         let vertex = current_graph.create_vertex();
                                         if vertex.id != id {
                                             return Err(GraphSetParseError {
-                                                    message: format!("Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}", current_graph.id.clone(), id, current_graph.get_last_vertex().id)
-                                                });
+                                                message: format!(
+                                                    "Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}",
+                                                    current_graph.id.clone(),
+                                                    id,
+                                                    current_graph.get_last_vertex().id
+                                                ),
+                                            });
                                         }
                                         let label = data.next().ok_or(GraphSetParseError {
                                             message: format!(
@@ -136,8 +144,7 @@ impl Graph {
                                                 ),
                                             });
                                         }
-                                        current_graph.get_last_vertex().vertex_type =
-                                            label.unwrap();
+                                        current_graph.get_last_vertex().label = label.unwrap();
                                         let vertex_type =
                                             data.next().ok_or(GraphSetParseError {
                                                 message: format!(
@@ -253,7 +260,7 @@ impl Graph {
                                                 current_graph.id
                                             )
                                             .to_string(),
-                                        })
+                                        });
                                     }
                                 }
                             }
@@ -274,11 +281,18 @@ impl Graph {
         Ok(graph_list)
     }
 
-    pub fn to_str_repr(&self, support: Option<usize>) -> String {
+    pub fn to_str_repr(
+        &self,
+        frequency_exact: Option<usize>,
+        frequency_relaxed: Option<usize>,
+    ) -> String {
         let mut lines: Vec<String> = Vec::new();
         let mut g_rep = format!("t # {}", self.id);
-        if let Some(support) = support {
-            g_rep += &*format!(" * {}", support);
+        if let Some(frequency_exact) = frequency_exact {
+            g_rep += &*format!(" * {}", frequency_exact);
+        }
+        if let Some(frequency_relaxed) = frequency_relaxed {
+            g_rep += &*format!(" / {}", frequency_relaxed);
         }
         lines.push(g_rep);
         let mut edges: Vec<&Edge> = Vec::new();

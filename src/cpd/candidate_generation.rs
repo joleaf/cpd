@@ -52,7 +52,7 @@ impl AlgoCandidateGeneration {
         let delta = now.elapsed().as_millis();
         let all_candidates: Vec<_> = candidates.iter().flatten().collect();
         println!(
-            "Found candidates {}, took {}ms",
+            " -> Found candidates {}; took {}ms",
             all_candidates.len(),
             delta
         );
@@ -68,14 +68,6 @@ fn get_fully_connected_candidates(
     max_number_of_activity_vertices: &usize,
     graph_id_generator: Arc<GraphIdGenerator>,
 ) -> Vec<Vec<Graph>> {
-    println!(
-        "Searching candidates in {} graphs, with {} as activity vertex type and {:?} as object vertex types, from {} activtiy vertices to {} activity vertices",
-        graphs.len(),
-        activity_vertex_type,
-        object_vertex_types,
-        min_number_of_activity_vertices,
-        max_number_of_activity_vertices
-    );
     graphs
         .par_iter() // Parallel processing
         //.iter()
@@ -126,7 +118,7 @@ fn _get_fully_connected_candidates_of_graph(
                     );
                     vertex_id_mapping.insert(activity_vertex.id, new_activity_vertex.id);
                 }
-                // Create object vertices and edges
+                // Create object vertices and all edges
                 for activity_vertex in comb_ref.iter() {
                     for edge in activity_vertex.edges.iter() {
                         let to_vertex: &Vertex = graph.vertices.get(edge.to).unwrap();
@@ -151,7 +143,7 @@ fn _get_fully_connected_candidates_of_graph(
                                 .vertices
                                 .get_mut(*vertex_id_mapping.get(&activity_vertex.id).unwrap())
                                 .unwrap()
-                                .push(to_vertex.id, edge.e_label);
+                                .push(vertex_id_mapping[&to_vertex.id], edge.e_label);
                         }
                     }
                 }

@@ -10,9 +10,9 @@ use crate::data::{
 
 #[derive(Debug)]
 pub enum AlgoGraphMatching {
-    CosineSimilarity { alpha: f32 },
+    CosineSimilarity { alpha: f32, matching_threshold: f32 },
 }
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum MatchingResult {
     ExactMatch,
     RelaxedMatch,
@@ -22,21 +22,20 @@ pub enum MatchingResult {
 impl AlgoGraphMatching {
     pub fn calc_distance(&self, one_graph: &Graph, other_graph: &Graph) -> f32 {
         match self {
-            AlgoGraphMatching::CosineSimilarity { alpha: alpha_value } => {
-                graph_cosine_similarity(one_graph, other_graph, *alpha_value)
-            }
+            AlgoGraphMatching::CosineSimilarity {
+                alpha,
+                matching_threshold: _,
+            } => graph_cosine_similarity(one_graph, other_graph, alpha),
         }
     }
 
-    pub fn match_graphs(
-        &self,
-        one_graph: &Graph,
-        other_graph: &Graph,
-        matching_threshold: &f32,
-    ) -> MatchingResult {
+    pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
         match self {
-            AlgoGraphMatching::CosineSimilarity { alpha: _ } => {
+            AlgoGraphMatching::CosineSimilarity {
+                alpha: _,
+                matching_threshold,
+            } => {
                 if distance == 1.0f32 {
                     MatchingResult::ExactMatch
                 } else if &distance >= matching_threshold {
@@ -49,7 +48,7 @@ impl AlgoGraphMatching {
     }
 }
 
-fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: f32) -> f32 {
+fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: &f32) -> f32 {
     let one_graph_vertex_vector = get_vertex_vector(one_graph);
     let other_graph_vertex_vector = get_vertex_vector(other_graph);
     let one_graph_edge_vector = get_edge_vector(one_graph);
@@ -116,19 +115,19 @@ mod tests {
         other_eq_graph.vertices.get_mut(1).unwrap().push(3, 0);
         other_eq_graph.vertices.get_mut(3).unwrap().push(2, 0);
         assert_eq!(
-            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
-                &one_graph,
-                &other_eq_graph,
-                &1.0f32
-            ),
+            AlgoGraphMatching::CosineSimilarity {
+                alpha: 0.5,
+                matching_threshold: 1.0
+            }
+            .match_graphs(&one_graph, &other_eq_graph,),
             MatchingResult::ExactMatch
         );
         assert_eq!(
-            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
-                &one_graph,
-                &other_eq_graph,
-                &0.5f32
-            ),
+            AlgoGraphMatching::CosineSimilarity {
+                alpha: 0.5,
+                matching_threshold: 0.5
+            }
+            .match_graphs(&one_graph, &other_eq_graph,),
             MatchingResult::ExactMatch
         );
 
@@ -144,19 +143,19 @@ mod tests {
         other_graph.vertices.get_mut(3).unwrap().push(2, 0);
 
         assert_eq!(
-            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
-                &one_graph,
-                &other_graph,
-                &0.5f32
-            ),
+            AlgoGraphMatching::CosineSimilarity {
+                alpha: 0.5,
+                matching_threshold: 0.5
+            }
+            .match_graphs(&one_graph, &other_graph,),
             MatchingResult::NoMatch
         );
         assert_eq!(
-            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
-                &one_graph,
-                &other_graph,
-                &0.4f32
-            ),
+            AlgoGraphMatching::CosineSimilarity {
+                alpha: 0.5,
+                matching_threshold: 0.4
+            }
+            .match_graphs(&one_graph, &other_graph,),
             MatchingResult::RelaxedMatch
         );
     }

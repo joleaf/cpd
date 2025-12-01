@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Edge {
     pub id: usize,
     pub from: usize,

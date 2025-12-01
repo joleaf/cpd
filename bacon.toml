@@ -80,21 +80,21 @@ on_success = "back" # so that we don't open the browser at each change
 # if it makes sense for this crate.
 [jobs.run]
 command = [
-    "cargo", "run", "--", "--input", "graphs.txt", "--activity-vertex-type", "3", "--object-vertex-types", "1", "--support-exact", "2", "--min-vertices", "4", "--max-vertices", "5"
+    "cargo", "run", "--release", "--", 
+      "--input", "graphs.txt", 
+      "--activity-vertex-type", "3",
+      "--object-vertex-types", "1", 
+      "--support-exact", "2", 
+      "--support-relaxed", "5", 
+      "--relaxed-threshold", "0.9",
+      "--min-vertices", "3",
+      "--max-vertices", "3"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true
 allow_warnings = true
 background = true
 
-[jobs.run-release]
-command = [
-    "cargo", "run", "--release", "--", "--input", "graphs.txt", "--activity-vertex-type", "3", "--object-vertex-types", "1", "--support-exact", "2", "--min-vertices", "4", "--max-vertices", "5"
-    # put launch parameters for your program behind a `--` separator
-]
-need_stdout = true
-allow_warnings = true
-background = true
 
 # Run your long-running application (eg server) and have the result displayed in bacon.
 # For programs that never stop (eg a server), `background` is set to false
@@ -133,5 +133,4 @@ allow_warnings = true
 [keybindings]
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
-e = "job:run-release"
 # p = "job:pedantic" 
