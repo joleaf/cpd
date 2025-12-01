@@ -3,43 +3,45 @@ name: build and release
 on:
   workflow_dispatch:
   release:
-    types: [ created ]
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    name: ${{ matrix.platform.os_name }} with Rust ${{ matrix.toolchain }}
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
       matrix:
         platform:
           - os_name: Linux-aarch64
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             target: aarch64-unknown-linux-musl
-            bin: gspan-linux-arm64
+            bin: cpd-linux-arm64
           - os_name: Linux-x86_64
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            bin: gspan-linux-amd64
+            bin: cpd-linux-amd64
           - os_name: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            bin: gspan-amd64.exe
+            bin: cpd-amd64.exe
           - os_name: macOS-x86_64
-            os: macOS-latest
+            os: macos-latest
             target: x86_64-apple-darwin
-            bin: gspan-darwin-amd64
+            bin: cpd-darwin-amd64
           - os_name: macOS-aarch64
-            os: macOS-latest
+            os: macos-latest
             target: aarch64-apple-darwin
-            bin: gspan-darwin-arm64
+            bin: cpd-darwin-arm64
         toolchain:
           - stable
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
         with:
@@ -48,15 +50,33 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           args: "--locked --release"
           strip: true
-      - name: Rename binary (linux and macos)
-        run: mv target/${{ matrix.platform.target }}/release/gspan target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+
+      - name: Rename binary (Linux/macOS)
         if: matrix.platform.os_name != 'Windows-x86_64'
-      - name: Rename binary (windows)
-        run: mv target/${{ matrix.platform.target }}/release/gspan.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+        run: mv target/${{ matrix.platform.target }}/release/cpd target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
+
+      - name: Rename binary (Windows)
         if: matrix.platform.os_name == 'Windows-x86_64'
-      - name: Generate SHA-256
+        shell: pwsh
+        run: Rename-Item "target/${{ matrix.platform.target }}/release/cpd.exe" "${{ matrix.platform.bin }}"
+
+      # Generate SHA-256 in an OS-correct way
+      - name: Generate SHA-256 (Linux)
+        if: startsWith(matrix.platform.os_name, 'Linux')
+        run: sha256sum target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+
+      - name: Generate SHA-256 (macOS)
+        if: startsWith(matrix.platform.os_name, 'macOS')
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
-      - name: Release binary and SHA-256 checksum to GitHub
+
+      - name: Generate SHA-256 (Windows)
+        if: matrix.platform.os_name == 'Windows-x86_64'
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash -Algorithm SHA256 "target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}"
+          $hash.Hash | Out-File -Encoding ascii "target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256"
+
+      - name: Release binary & checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
           files: |
