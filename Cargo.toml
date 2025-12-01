@@ -6,9 +6,13 @@ authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
 license = "MIT"
 description = "A tool to search for context-aware and relaxed frequent subgraphs in a graph database"
 readme = "Readme.md"
-repository = "https://github.com/joleaf/cpd.rust"
+repository = "https://github.com/joleaf/cpd"
+homepage = "https://github.com/joleaf/cpd"
 keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph']
 categories = ["algorithms", "command-line-utilities"]
+exclude = [
+    "graphs.txt",
+]
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
@@ -20,3 +24,5 @@ rayon = "1.11.0"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+
