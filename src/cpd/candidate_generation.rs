@@ -68,7 +68,14 @@ fn get_fully_connected_candidates(
     max_number_of_activity_vertices: &usize,
     graph_id_generator: Arc<GraphIdGenerator>,
 ) -> Vec<Vec<Graph>> {
-    println!("Searching candidates in {} graphs, with {} as activity vertex type and {:?} as object vertex types, from {} activtiy vertices to {} activity vertices", graphs.len(), activity_vertex_type, object_vertex_types, min_number_of_activity_vertices, max_number_of_activity_vertices);
+    println!(
+        "Searching candidates in {} graphs, with {} as activity vertex type and {:?} as object vertex types, from {} activtiy vertices to {} activity vertices",
+        graphs.len(),
+        activity_vertex_type,
+        object_vertex_types,
+        min_number_of_activity_vertices,
+        max_number_of_activity_vertices
+    );
     graphs
         .par_iter() // Parallel processing
         //.iter()

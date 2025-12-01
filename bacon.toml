@@ -54,7 +54,7 @@ need_stdout = false
 # - a specific test: bacon test -- config::test_default_files
 # - the tests of a package: bacon test -- -- -p config
 [jobs.test]
-command = ["cargo", "test", "--", "--nocapture"]
+command = ["cargo", "test" ]
 need_stdout = true
 
 [jobs.nextest]
@@ -81,6 +81,15 @@ on_success = "back" # so that we don't open the browser at each change
 [jobs.run]
 command = [
     "cargo", "run", "--", "--input", "graphs.txt", "--activity-vertex-type", "3", "--object-vertex-types", "1", "--support-exact", "2", "--min-vertices", "4", "--max-vertices", "5"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-release]
+command = [
+    "cargo", "run", "--release", "--", "--input", "graphs.txt", "--activity-vertex-type", "3", "--object-vertex-types", "1", "--support-exact", "2", "--min-vertices", "4", "--max-vertices", "5"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true
@@ -124,4 +133,5 @@ allow_warnings = true
 [keybindings]
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
-p = "job:pedantic" 
+e = "job:run-release"
+# p = "job:pedantic" 

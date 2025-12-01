@@ -1,7 +1,7 @@
 [package]
 name = "cpd"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
 license = "MIT"
 description = "A tool to search frequent subgraphs in a graph database"

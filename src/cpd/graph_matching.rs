@@ -105,23 +105,59 @@ mod tests {
         one_graph.vertices.get_mut(1).unwrap().push(2, 0);
         one_graph.vertices.get_mut(1).unwrap().push(3, 0);
         one_graph.vertices.get_mut(3).unwrap().push(2, 0);
+        let mut other_eq_graph = Graph::new(1);
+        other_eq_graph.create_vertex_with_data(1, 2);
+        other_eq_graph.create_vertex_with_data(2, 2);
+        other_eq_graph.create_vertex_with_data(3, 4);
+        other_eq_graph.create_vertex_with_data(4, 2);
+        other_eq_graph.vertices.get_mut(0).unwrap().push(1, 0);
+        other_eq_graph.vertices.get_mut(0).unwrap().push(2, 0);
+        other_eq_graph.vertices.get_mut(1).unwrap().push(2, 0);
+        other_eq_graph.vertices.get_mut(1).unwrap().push(3, 0);
+        other_eq_graph.vertices.get_mut(3).unwrap().push(2, 0);
+        assert_eq!(
+            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
+                &one_graph,
+                &other_eq_graph,
+                &1.0f32
+            ),
+            MatchingResult::ExactMatch
+        );
+        assert_eq!(
+            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
+                &one_graph,
+                &other_eq_graph,
+                &0.5f32
+            ),
+            MatchingResult::ExactMatch
+        );
+
         let mut other_graph = Graph::new(1);
-        other_graph.create_vertex_with_data(1, 2);
         other_graph.create_vertex_with_data(2, 2);
-        other_graph.create_vertex_with_data(3, 4);
-        other_graph.create_vertex_with_data(4, 2);
-        other_graph.vertices.get_mut(0).unwrap().push(1, 0);
+        other_graph.create_vertex_with_data(3, 2);
+        other_graph.create_vertex_with_data(1, 4);
+        other_graph.create_vertex_with_data(2, 2);
+        other_graph.vertices.get_mut(0).unwrap().push(3, 0);
         other_graph.vertices.get_mut(0).unwrap().push(2, 0);
         other_graph.vertices.get_mut(1).unwrap().push(2, 0);
         other_graph.vertices.get_mut(1).unwrap().push(3, 0);
         other_graph.vertices.get_mut(3).unwrap().push(2, 0);
+
         assert_eq!(
             AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
                 &one_graph,
                 &other_graph,
-                &1.0f32
+                &0.5f32
             ),
-            MatchingResult::ExactMatch
-        )
+            MatchingResult::NoMatch
+        );
+        assert_eq!(
+            AlgoGraphMatching::CosineSimilarity { alpha: 0.5 }.match_graphs(
+                &one_graph,
+                &other_graph,
+                &0.4f32
+            ),
+            MatchingResult::RelaxedMatch
+        );
     }
 }

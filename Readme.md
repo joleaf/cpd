@@ -24,7 +24,7 @@ Provide a plain text file with the graph database:
 - t-line: Begin of a new graph
     - Format `t # i` -> `i`
 - v-line: Definition of a vertex
-    - Format `v i l` -> `i` (int): index of the vertex inside the graph; `l` (int): label of the vertex
+    - Format `v i l t` -> `i` (int): index of the vertex inside the graph; `l` (int): label of the vertex; `t` (int): type of the vertex
 - e-line: Definition of an edge
     - Format `e v1 v2 l`-> `v1` (int): index of the from-vertex of the graph; `v2` (int): index of the to-vertex of the
       graph; `l` (int): label of the edge
