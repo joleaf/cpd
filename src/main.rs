@@ -7,7 +7,8 @@ pub mod data;
 
 use clap::Parser;
 use cpd::{
-    candidates::AlgoCandidateGeneration, config::CPDConfig, pattern_matching::AlgoPatternMatching,
+    candidate_generation::AlgoCandidateGeneration, candidate_matching::AlgoCandidateMatching,
+    config::CPDConfig, graph_matching::AlgoGraphMatching,
 };
 
 /// Fast Rust implementation for gSpan
@@ -54,10 +55,11 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    println!("CPD Subgraph Mining");
-    println!("---------------------");
-    println!("Using arguments:");
-    println!("{:?}", args);
+    println!("-----------------------");
+    println!("| CPD Subgraph Mining |");
+    println!("-----------------------");
+    // println!("Using arguments:");
+    // println!("{:?}", args);
     let _now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
     match graphs {
@@ -74,13 +76,14 @@ fn main() {
             min_number_of_activity_vertices: args.min_vertices,
             max_number_of_activity_vertices: args.max_vertices,
         },
-        AlgoPatternMatching::CosineSimilarity { alpha: 0.5f32 },
+        AlgoCandidateMatching::Naive {
+            algo_graph_matching: AlgoGraphMatching::CosineSimilarity { alpha: 0.5f32 },
+        },
     );
-
     cpd_config.run(&_graphs);
     println!("Mining subgraphs..");
     let _delta = _now.elapsed().as_millis();
-    println!("Finished.");
+    println!("Finished. Total: {}ms", _delta);
     // println!("Found {} subgraphs", subgraphs);
-    println!("Took {}ms", _delta);
+    // TODO: Export patterns
 }

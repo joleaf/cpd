@@ -117,7 +117,7 @@ impl Graph {
                                         let vertex = current_graph.create_vertex();
                                         if vertex.id != id {
                                             return Err(GraphSetParseError {
-                                                    message: format!("Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}", current_graph.id.to_string(), id, current_graph.get_last_vertex().id)
+                                                    message: format!("Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}", current_graph.id.clone(), id, current_graph.get_last_vertex().id)
                                                 });
                                         }
                                         let label = data.next().ok_or(GraphSetParseError {
