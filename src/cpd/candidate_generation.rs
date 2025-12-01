@@ -4,7 +4,6 @@ use rayon::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
-    time::Instant,
 };
 #[derive(Debug)]
 struct GraphIdGenerator(Mutex<usize>);
@@ -21,6 +20,30 @@ impl GraphIdGenerator {
     }
 }
 #[derive(Debug)]
+/// Enum representing different strategies for generating candidate subgraphs from a set of input graphs.
+///
+/// Currently, it supports:
+/// - `FullyConnected`: Generates candidates where a subset of activity vertices are fully connected,
+///   optionally including connected object vertices. The number of activity vertices can be controlled
+///   with minimum and maximum limits.
+///
+/// # Example
+/// ```rust
+/// use crate::data::graph::Graph;
+/// use your_crate::AlgoCandidateGeneration;
+///
+/// let graphs: Vec<Graph> = vec![/* some graphs */];
+///
+/// let algo = AlgoCandidateGeneration::FullyConnected {
+///     activity_vertex_type: 2,
+///     object_vertex_types: vec![4],
+///     min_number_of_activity_vertices: 2,
+///     max_number_of_activity_vertices: 3,
+/// };
+///
+/// let candidates = algo.get_candidates(&graphs);
+/// // `candidates` is a Vec<Vec<Graph>>, one Vec<Graph> per input graph
+/// ```
 pub enum AlgoCandidateGeneration {
     FullyConnected {
         activity_vertex_type: usize,
@@ -31,10 +54,31 @@ pub enum AlgoCandidateGeneration {
 }
 
 impl AlgoCandidateGeneration {
+    /// Generates candidate subgraphs for each input graph according to the selected generation strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `graphs` - A vector of input graphs to generate candidates from.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<Vec<Graph>>`, where each inner vector contains candidate subgraphs generated from
+    /// the corresponding input graph.
+    ///
+    /// # Notes
+    ///
+    /// - For `FullyConnected`, only activity vertices that are fully connected (all pairs have paths) are considered.
+    /// - Object vertices connected to selected activity vertices are included in the candidate graphs.
+    /// - Candidate graphs are assigned unique IDs automatically.
+    ///
+    /// # Example
+    /// ```rust
+    /// let candidates = algo.get_candidates(&graphs);
+    /// assert_eq!(candidates.len(), graphs.len()); // one Vec<Graph> per input graph
+    /// ```
     pub fn get_candidates(&self, graphs: &Vec<Graph>) -> Vec<Vec<Graph>> {
         let graph_id_generator = Arc::new(GraphIdGenerator::new());
-        let now = Instant::now();
-        let candidates = match self {
+        match self {
             AlgoCandidateGeneration::FullyConnected {
                 activity_vertex_type,
                 object_vertex_types,
@@ -48,15 +92,7 @@ impl AlgoCandidateGeneration {
                 max_number_of_activity_vertices,
                 graph_id_generator,
             ),
-        };
-        let delta = now.elapsed().as_millis();
-        let all_candidates: Vec<_> = candidates.iter().flatten().collect();
-        println!(
-            " -> Found candidates {}; took {}ms",
-            all_candidates.len(),
-            delta
-        );
-        candidates
+        }
     }
 }
 

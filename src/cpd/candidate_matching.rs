@@ -9,12 +9,43 @@ use dashmap::DashMap;
 use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
+/// Represents the result of evaluating a candidate pattern across a collection of graphs.
+///
+/// A pattern refers to a subgraph candidate that appears either exactly or in a relaxed form
+/// across multiple input graphs. The frequencies record how often this pattern appears across
+/// those graphs.
+///
+/// # Fields
+/// - `pattern`: The subgraph pattern itself.
+/// - `frequency_exact`: Number of graphs in which the pattern appears as an **exact match**.
+/// - `frequency_relaxed`: Number of graphs in which the pattern appears as either an
+///   **exact match** or a **relaxed match**.
+///
+/// # Notes
+/// - The `pattern.id` value is reassigned after matching to ensure that resulting patterns
+///   receive unique, consecutive identifiers.
+/// - Relaxed matching criteria depend on the selected `AlgoGraphMatching` strategy.
 pub struct PatternResult {
     pub pattern: Graph,
     pub frequency_exact: usize,
     pub frequency_relaxed: usize,
 }
 
+/// Specifies the strategy used to perform pairwise matching between candidate subgraphs.
+///
+/// Matching determines whether two candidate graphs represent the same underlying pattern,
+/// either **exactly** or in a **relaxed** manner. The matching strategy affects runtime
+/// performance but not correctness.
+///
+/// # Variants
+///
+/// - `Naive`:
+///   Performs matching sequentially. Suitable for small datasets; easier to debug.
+/// - `Parallel`:
+///   Uses Rayon for parallel iteration and DashMap for a shared symmetric match cache.
+///   Recommended for large candidate sets or many input graphs.
+///
+/// The matching logic itself is provided by `AlgoGraphMatching`.
 #[derive(Debug)]
 pub enum AlgoCandidateMatching {
     Naive,
@@ -22,6 +53,87 @@ pub enum AlgoCandidateMatching {
 }
 
 impl AlgoCandidateMatching {
+    /// Executes the matching process for all candidate subgraphs across all input graphs.
+    ///
+    /// Each candidate from graph *A* is compared to candidates from every *other* graph using
+    /// the selected `AlgoGraphMatching` strategy. If a candidate satisfies either the exact
+    /// or relaxed support threshold, it is included in the final result as a `PatternResult`.
+    ///
+    /// # Arguments
+    ///
+    /// * `candidates` — A slice where each element contains all candidate subgraphs generated
+    ///   from one input graph.
+    /// * `algo_graph_matching` — The matching algorithm used to compare two graphs.
+    /// * `support_exact` — Minimum number of exact matches required for a candidate to be kept.
+    /// * `support_relaxed` — Minimum number of relaxed-or-exact matches required.
+    ///
+    /// # Returns
+    ///
+    /// A flattened `Vec<PatternResult>` containing all subgraph patterns that reach the required
+    /// frequency thresholds. The IDs of resulting pattern graphs are reassigned to ensure a
+    /// consecutive sequence starting at zero.
+    ///
+    /// # Example
+    ///
+    /// The following example builds two simple graphs that share the same structure and then
+    /// runs exact/relaxed matching between their candidates:
+    ///
+    /// ```rust
+    /// use crate::candidate_matching::{AlgoCandidateMatching, PatternResult};
+    /// use crate::graph_matching::{AlgoGraphMatching, MatchingResult};
+    /// use crate::data::graph::Graph;
+    ///
+    /// // Build two small graphs with identical structure
+    /// fn make_graph(id: usize) -> Graph {
+    ///     let mut g = Graph::new(id);
+    ///     // Three activity vertices
+    ///     g.create_vertex_with_data(1, 2);
+    ///     g.create_vertex_with_data(2, 2);
+    ///     g.create_vertex_with_data(3, 2);
+    ///     // Fully connect them
+    ///     g.vertices.get_mut(0).unwrap().push(1, 0);
+    ///     g.vertices.get_mut(1).unwrap().push(2, 0);
+    ///     g.vertices.get_mut(2).unwrap().push(0, 0);
+    ///     g
+    /// }
+    ///
+    /// let g1 = make_graph(1);
+    /// let g2 = make_graph(2);
+    ///
+    /// // Each graph contributes its own set of candidates
+    /// // Here we pretend each graph itself is a single candidate
+    /// let candidates = vec![
+    ///     vec![g1.clone()],
+    ///     vec![g2.clone()],
+    /// ];
+    ///
+    /// // Matching algorithm based on vertex/edge cosine similarity
+    /// let matcher_algo = AlgoGraphMatching::CosineSimilarity {
+    ///     alpha: 0.5,
+    ///     matching_threshold: 0.8,
+    /// };
+    ///
+    /// // Use naive matching for simplicity
+    /// let matcher = AlgoCandidateMatching::Naive;
+    ///
+    /// let patterns: Vec<PatternResult> =
+    ///     matcher.run_matching(&candidates, &matcher_algo, 1, 1);
+    ///
+    /// assert_eq!(patterns.len(), 1);
+    /// assert_eq!(patterns[0].frequency_exact, 2);  // g1 matches g2 exactly
+    ///
+    /// println!(
+    ///     "Discovered pattern with new id {}, occurring {} exact times",
+    ///     patterns[0].pattern.id,
+    ///     patterns[0].frequency_exact
+    /// );
+    /// ```
+    ///
+    /// # Notes
+    ///
+    /// - The method performs candidate-to-candidate comparisons across **different** input graphs only.
+    /// - In parallel mode, a shared symmetric cache ensures each pair of graphs is matched at most once.
+    /// - After matching, pattern IDs are reassigned to ensure stable ordering in output.
     pub fn run_matching(
         &self,
         candidates: &[Vec<Graph>],

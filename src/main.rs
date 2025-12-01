@@ -11,7 +11,7 @@ use cpd::{
     graph_matching::AlgoGraphMatching,
 };
 
-/// Fast Rust implementation for gSpan
+/// Fast Rust implementation for Collaboration Pattern Discovery
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -51,21 +51,35 @@ struct Args {
     /// Maximum number of the main vertices
     #[arg(long, default_value_t = 5)]
     max_vertices: usize,
+
+    /// Supress debug statements
+    #[arg(long, default_value_t = false)]
+    silence: bool,
 }
 
 fn main() {
     let args = Args::parse();
+    let silence = args.silence;
 
-    println!("-----------------------");
-    println!("| CPD Subgraph Mining |");
-    println!("-----------------------");
-    // println!("Using arguments:");
-    // println!("{:?}", args);
+    if !silence {
+        println!("-----------------------");
+        println!("| CPD Subgraph Mining |");
+        println!("-----------------------");
+    }
+    if args.min_vertices > args.max_vertices {
+        println!(
+            "Min number of activity vertices ({}) > Max number of activity vertices ({})!",
+            args.min_vertices, args.max_vertices
+        );
+        return;
+    }
     let now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
     match graphs {
         Ok(ref graphs) => {
-            println!("All good parsing input file, found {} graphs", graphs.len());
+            if !silence {
+                println!("All good parsing input file, found {} graphs", graphs.len());
+            }
         }
         Err(err) => panic!("{}", err.to_string()),
     }
@@ -78,20 +92,22 @@ fn main() {
             max_number_of_activity_vertices: args.max_vertices,
         },
         AlgoGraphMatching::CosineSimilarity {
-            alpha: 0.5f32,
+            alpha: 0.5,
             matching_threshold: args.relaxed_threshold,
         },
         args.support_exact,
         args.support_relaxed,
+        args.silence,
     );
-    println!("Mining patterns..");
+    if !silence {
+        println!("Mining patterns..");
+    };
     let patterns = cpd_config.run(&graphs);
     let delta = now.elapsed().as_millis();
-    println!(
-        "Finished. Final patterns: {}; took {delta}ms",
-        patterns.len()
-    );
-    println!("#######");
+    if !silence {
+        println!("Finished. Total time: {delta}ms");
+        println!("#######");
+    };
     if args.output == "stdout" {
         for g in patterns.iter() {
             println!(
@@ -101,5 +117,19 @@ fn main() {
             );
         }
     } else {
+        use std::fs::File;
+        use std::io::Write;
+
+        let mut file = File::create(&args.output).expect("Failed to create output file");
+
+        for g in patterns.iter() {
+            let line = format!(
+                "{}\n",
+                g.pattern
+                    .to_str_repr(Some(g.frequency_exact), Some(g.frequency_relaxed))
+            );
+            file.write_all(line.as_bytes())
+                .expect("Failed to write to output file");
+        }
     }
 }

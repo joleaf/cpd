@@ -8,10 +8,64 @@ use crate::data::{
     utils::{get_edge_vector, get_vertex_vector},
 };
 
+/// Defines the available algorithms for comparing two graphs and determining
+/// how similar they are.
+///
+/// Currently, the only implemented method is:
+///
+/// - `CosineSimilarity { alpha, matching_threshold }`  
+///   Computes similarity based on the cosine similarity of vertex- and edge-frequency
+///   vectors extracted from both graphs.  
+///
+/// # Parameters
+///
+/// * `alpha` – Weight (0–1) determining the contribution of vertex similarity
+///   vs. edge similarity.  
+///   - `1.0` → only vertex similarity  
+///   - `0.0` → only edge similarity  
+/// * `matching_threshold` – Minimum similarity required to classify two graphs
+///   as a `RelaxedMatch`.
+///
+/// # Matching Semantics
+///
+/// After computing the similarity `sim ∈ [0, 1]`:
+///
+/// - `sim == 1.0` → `ExactMatch`  
+/// - `sim >= matching_threshold` → `RelaxedMatch`  
+/// - otherwise → `NoMatch`
+///
+/// # Example
+///
+/// ```rust
+/// use crate::graph_matching::{AlgoGraphMatching, MatchingResult};
+/// use crate::data::graph::Graph;
+///
+/// let mut g1 = Graph::new(1);
+/// g1.create_vertex_with_data(1, 2);
+///
+/// let mut g2 = Graph::new(2);
+/// g2.create_vertex_with_data(1, 2);
+///
+/// let algo = AlgoGraphMatching::CosineSimilarity {
+///     alpha: 0.5,
+///     matching_threshold: 0.8,
+/// };
+///
+/// let result = algo.match_graphs(&g1, &g2);
+///
+/// assert!(matches!(result, MatchingResult::ExactMatch | MatchingResult::RelaxedMatch | MatchingResult::NoMatch));
+/// ```
 #[derive(Debug)]
 pub enum AlgoGraphMatching {
     CosineSimilarity { alpha: f32, matching_threshold: f32 },
 }
+
+/// Result of comparing two graphs with the selected graph-matching algorithm.
+///
+/// # Variants
+/// - `ExactMatch` – Graphs are identical under the similarity metric (similarity = 1.0).  
+/// - `RelaxedMatch` – Graphs are sufficiently similar but not identical.  
+/// - `NoMatch` – Graphs do not meet the relaxed similarity threshold.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum MatchingResult {
     ExactMatch,
@@ -20,6 +74,35 @@ pub enum MatchingResult {
 }
 
 impl AlgoGraphMatching {
+    /// Computes a similarity score between two graphs.
+    ///
+    /// # Returns
+    ///
+    /// A floating-point similarity value in the range `[0.0, 1.0]`, where:
+    ///
+    /// - `1.0` represents identical graphs (based on vertex & edge vectors)
+    /// - `0.0` represents complete dissimilarity
+    ///
+    /// The meaning of the distance depends on the specific matching algorithm:
+    ///
+    /// For `CosineSimilarity`, the final score is:
+    ///
+    /// ```
+    /// score = alpha * vertex_similarity + (1 - alpha) * edge_similarity
+    /// ```
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// let algo = AlgoGraphMatching::CosineSimilarity {
+    ///     alpha: 0.4,
+    ///     matching_threshold: 0.7,
+    /// };
+    ///
+    /// let distance = algo.calc_distance(&g1, &g2);
+    ///
+    /// println!("Similarity = {}", distance);
+    /// ```
     pub fn calc_distance(&self, one_graph: &Graph, other_graph: &Graph) -> f32 {
         match self {
             AlgoGraphMatching::CosineSimilarity {
@@ -29,6 +112,42 @@ impl AlgoGraphMatching {
         }
     }
 
+    /// Determines the match type between two graphs: exact, relaxed, or no match.
+    ///
+    /// # Rules
+    ///
+    /// Let `sim = calc_distance(one_graph, other_graph)`:
+    ///
+    /// - If `sim == 1.0` → `MatchingResult::ExactMatch`
+    /// - Else if `sim >= matching_threshold` → `MatchingResult::RelaxedMatch`
+    /// - Else → `MatchingResult::NoMatch`
+    ///
+    /// # Parameters
+    ///
+    /// * `one_graph` – First graph in the comparison  
+    /// * `other_graph` – Second graph  
+    ///
+    /// # Returns
+    ///
+    /// A `MatchingResult` enum describing how similar the graphs are.
+    ///
+    /// # Example
+    ///
+    ///
+    /// ```rust
+    /// let algo = AlgoGraphMatching::CosineSimilarity {
+    ///     alpha: 0.5,
+    ///     matching_threshold: 0.6,
+    /// };
+    ///
+    /// let r = algo.match_graphs(&graph_a, &graph_b);
+    ///
+    /// match r {
+    ///     MatchingResult::ExactMatch => println!("Identical patterns"),
+    ///     MatchingResult::RelaxedMatch => println!("Similar patterns"),
+    ///     MatchingResult::NoMatch => println!("Not similar"),
+    /// }
+    /// ```
     pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
         match self {
