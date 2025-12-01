@@ -38,11 +38,11 @@ impl AlgoGraphMatching {
         match self {
             AlgoGraphMatching::CosineSimilarity { alpha: _ } => {
                 if distance == 1.0f32 {
-                    return MatchingResult::ExactMatch;
+                    MatchingResult::ExactMatch
                 } else if &distance >= matching_threshold {
-                    return MatchingResult::RelaxedMatch;
+                    MatchingResult::RelaxedMatch
                 } else {
-                    return MatchingResult::NoMatch;
+                    MatchingResult::NoMatch
                 }
             }
         }
@@ -50,10 +50,10 @@ impl AlgoGraphMatching {
 }
 
 fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: f32) -> f32 {
-    let one_graph_vertex_vector = get_vertex_vector(&one_graph);
-    let other_graph_vertex_vector = get_vertex_vector(&other_graph);
-    let one_graph_edge_vector = get_edge_vector(&one_graph);
-    let other_graph_edge_vector = get_edge_vector(&other_graph);
+    let one_graph_vertex_vector = get_vertex_vector(one_graph);
+    let other_graph_vertex_vector = get_vertex_vector(other_graph);
+    let one_graph_edge_vector = get_edge_vector(one_graph);
+    let other_graph_edge_vector = get_edge_vector(other_graph);
     let sim_vertices =
         _calc_cosine_similarity(&one_graph_vertex_vector, &other_graph_vertex_vector);
     let sim_edges = _calc_cosine_similarity(&one_graph_edge_vector, &other_graph_edge_vector);

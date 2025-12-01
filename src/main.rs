@@ -60,7 +60,7 @@ fn main() {
     println!("-----------------------");
     // println!("Using arguments:");
     // println!("{:?}", args);
-    let _now = Instant::now();
+    let now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
     match graphs {
         Ok(ref graphs) => {
@@ -68,7 +68,7 @@ fn main() {
         }
         Err(err) => panic!("{}", err.to_string()),
     }
-    let _graphs = graphs.unwrap();
+    let graphs = graphs.unwrap();
     let cpd_config = CPDConfig::new(
         AlgoCandidateGeneration::FullyConnected {
             activity_vertex_type: args.activity_vertex_type,
@@ -80,10 +80,10 @@ fn main() {
             algo_graph_matching: AlgoGraphMatching::CosineSimilarity { alpha: 0.5f32 },
         },
     );
-    cpd_config.run(&_graphs);
     println!("Mining subgraphs..");
-    let _delta = _now.elapsed().as_millis();
-    println!("Finished. Total: {}ms", _delta);
+    cpd_config.run(&graphs);
+    let delta = now.elapsed().as_millis();
+    println!("Finished. Total: {delta}ms");
     // println!("Found {} subgraphs", subgraphs);
     // TODO: Export patterns
 }

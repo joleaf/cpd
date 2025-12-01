@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    usize,
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::data::edge::Edge;
 
@@ -40,7 +37,7 @@ pub fn vertices_are_connected(vertices: &Vec<&Vertex>) -> bool {
 pub fn get_vertex_vector(graph: &Graph) -> HashMap<usize, usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
-        *result.entry(v.label.clone()).or_insert(0) += 1;
+        *result.entry(v.label).or_insert(0) += 1;
     });
     result
 }
@@ -49,8 +46,8 @@ pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize), usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
         v.edges.iter().for_each(|e| {
-            let to_label = graph.vertices.get(e.to).unwrap().label.clone();
-            *result.entry((v.label.clone(), to_label)).or_insert(0) += 1;
+            let to_label = graph.vertices.get(e.to).unwrap().label;
+            *result.entry((v.label, to_label)).or_insert(0) += 1;
         });
     });
     result

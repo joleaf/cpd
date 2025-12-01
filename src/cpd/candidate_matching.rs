@@ -1,5 +1,3 @@
-use std::usize;
-
 use crate::data::graph::Graph;
 
 use super::graph_matching::AlgoGraphMatching;
@@ -12,7 +10,8 @@ pub enum AlgoCandidateMatching {
 }
 
 impl AlgoCandidateMatching {
-    pub fn run_matching(&self, candidates: &Vec<Vec<Graph>>) -> Vec<Graph> {
+    pub fn run_matching(&self, candidates: &[Vec<Graph>]) -> Vec<Graph> {
+        let _t = candidates;
         todo!()
     }
 }

@@ -33,7 +33,7 @@ pub enum AlgoCandidateGeneration {
 impl AlgoCandidateGeneration {
     pub fn get_candidates(&self, graphs: &Vec<Graph>) -> Vec<Vec<Graph>> {
         let graph_id_generator = Arc::new(GraphIdGenerator::new());
-        let _now = Instant::now();
+        let now = Instant::now();
         let candidates = match self {
             AlgoCandidateGeneration::FullyConnected {
                 activity_vertex_type,
@@ -49,12 +49,12 @@ impl AlgoCandidateGeneration {
                 graph_id_generator,
             ),
         };
-        let _delta = _now.elapsed().as_millis();
+        let delta = now.elapsed().as_millis();
         let all_candidates: Vec<_> = candidates.iter().flatten().collect();
         println!(
             "Found candidates {}, took {}ms",
             all_candidates.len(),
-            _delta
+            delta
         );
         candidates
     }
@@ -154,24 +154,167 @@ fn _get_fully_connected_candidates_of_graph(
     }
     candidates
 }
+
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::data::graph::Graph;
 
-    use super::*;
+    fn make_basic_graph() -> Graph {
+        // Vertex types:
+        // type 2 = activity
+        // type 4 = object
+        let mut g = Graph::new(1);
+
+        // Activity vertices
+        g.create_vertex_with_data(1, 2); // id 0
+        g.create_vertex_with_data(2, 2); // id 1
+        g.create_vertex_with_data(3, 2); // id 2
+
+        // Object vertex
+        g.create_vertex_with_data(4, 4); // id 3
+
+        // Edges creating connectivity among activities
+        g.vertices.get_mut(0).unwrap().push(1, 10);
+        g.vertices.get_mut(1).unwrap().push(2, 10);
+
+        // Objects connected all activity vertices
+        g.vertices.get_mut(0).unwrap().push(3, 20);
+        g.vertices.get_mut(1).unwrap().push(3, 20);
+        g.vertices.get_mut(2).unwrap().push(3, 20);
+
+        g
+    }
 
     #[test]
-    fn test_fully_connected() {
-        let mut graph = Graph::new(1);
-        graph.create_vertex_with_data(1, 2);
-        graph.create_vertex_with_data(2, 2);
-        graph.create_vertex_with_data(3, 4);
-        graph.create_vertex_with_data(4, 2);
-        graph.vertices.get_mut(0).unwrap().push(1, 0);
-        graph.vertices.get_mut(0).unwrap().push(2, 0);
-        graph.vertices.get_mut(1).unwrap().push(2, 0);
-        graph.vertices.get_mut(1).unwrap().push(3, 0);
-        graph.vertices.get_mut(3).unwrap().push(2, 0);
-        // TODO: Write tests for candidate generation
+    fn test_single_graph_single_candidate() {
+        let g = make_basic_graph();
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![4],
+            min_number_of_activity_vertices: 2,
+            max_number_of_activity_vertices: 2,
+        };
+
+        let result = algo.get_candidates(&vec![g]);
+
+        assert_eq!(result.len(), 1); // one input graph → one Vec<Graph>
+        assert_eq!(result[0].len(), 2); // possible pairs among 3 activities = 3C2 = 3
+
+        // All pairs are connected in the constructed graph
+    }
+
+    #[test]
+    fn test_non_connected_activity_vertices_are_rejected() {
+        let mut g = Graph::new(1);
+
+        // Two activities with no edge
+        g.create_vertex_with_data(1, 2); // id 0
+        g.create_vertex_with_data(2, 2); // id 1
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![],
+            min_number_of_activity_vertices: 2,
+            max_number_of_activity_vertices: 2,
+        };
+
+        let result = algo.get_candidates(&vec![g]);
+        assert_eq!(
+            result[0].len(),
+            0,
+            "Disconnected activities should not produce candidates"
+        );
+    }
+
+    #[test]
+    fn test_object_vertices_are_included() {
+        let g = make_basic_graph();
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![4],
+            min_number_of_activity_vertices: 2,
+            max_number_of_activity_vertices: 2,
+        };
+
+        let result = algo.get_candidates(&vec![g]);
+        let candidates = &result[0];
+
+        // find the candidate that includes vertex original id 1 (the one that links to object 3)
+        let candidate: &Graph = candidates
+            .iter()
+            .find(|c| c.vertices.iter().any(|v| v.label == 2))
+            .unwrap();
+
+        // Ensure object vertex exists
+        assert!(
+            candidate.vertices.iter().any(|v| v.vertex_type == 4),
+            "Candidate must include object vertices connected to selected activities"
+        );
+    }
+
+    #[test]
+    fn test_min_max_activity_vertex_limits() {
+        let g = make_basic_graph();
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![],
+            min_number_of_activity_vertices: 3,
+            max_number_of_activity_vertices: 3,
+        };
+
+        let result = algo.get_candidates(&vec![g]);
+
+        // Only one possible combination of size 3
+        assert_eq!(result[0].len(), 1);
+    }
+
+    #[test]
+    fn test_multiple_input_graphs() {
+        let g1 = make_basic_graph();
+        let g2 = make_basic_graph();
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![4],
+            min_number_of_activity_vertices: 2,
+            max_number_of_activity_vertices: 2,
+        };
+
+        let result = algo.get_candidates(&vec![g1, g2]);
+
+        // one vec per graph
+        assert_eq!(result.len(), 2);
+
+        // each graph should yield 3 candidates (3C2)
+        assert_eq!(result[0].len(), 2);
+        assert_eq!(result[1].len(), 2);
+    }
+
+    #[test]
+    fn test_graph_id_generation_increments() {
+        let g = make_basic_graph();
+
+        let algo = AlgoCandidateGeneration::FullyConnected {
+            activity_vertex_type: 2,
+            object_vertex_types: vec![4],
+            min_number_of_activity_vertices: 2,
+            max_number_of_activity_vertices: 2,
+        };
+
+        let result = algo.get_candidates(&vec![g]);
+
+        let ids: Vec<_> = result[0].iter().map(|c| c.id).collect();
+        let mut sorted = ids.clone();
+        sorted.sort();
+
+        assert_eq!(ids, sorted, "Graph IDs should increase monotonically");
+        assert!(
+            ids.windows(2).all(|w| w[1] > w[0]),
+            "Each ID must be unique and increasing"
+        );
     }
 }
