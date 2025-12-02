@@ -3,10 +3,7 @@ use std::{
     hash::Hash,
 };
 
-use crate::data::{
-    graph::Graph,
-    utils::{get_edge_vector, get_vertex_vector},
-};
+use crate::data::graph::Graph;
 
 /// Defines the available algorithms for comparing two graphs and determining
 /// how similar they are.
@@ -169,10 +166,10 @@ impl AlgoGraphMatching {
 }
 
 fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: &f32) -> f32 {
-    let one_graph_vertex_vector = get_vertex_vector(one_graph);
-    let other_graph_vertex_vector = get_vertex_vector(other_graph);
-    let one_graph_edge_vector = get_edge_vector(one_graph);
-    let other_graph_edge_vector = get_edge_vector(other_graph);
+    let one_graph_vertex_vector = one_graph.get_vertex_vector();
+    let other_graph_vertex_vector = other_graph.get_vertex_vector();
+    let one_graph_edge_vector = one_graph.get_edge_vector();
+    let other_graph_edge_vector = other_graph.get_edge_vector();
     let sim_vertices =
         _calc_cosine_similarity(&one_graph_vertex_vector, &other_graph_vertex_vector);
     let sim_edges = _calc_cosine_similarity(&one_graph_edge_vector, &other_graph_edge_vector);

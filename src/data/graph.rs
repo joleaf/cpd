@@ -1,9 +1,13 @@
 use crate::data::edge::Edge;
 use crate::data::vertex::Vertex;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufRead;
 use std::path::Path;
+use std::sync::{Arc, OnceLock};
 use std::{fmt, io};
+
+use super::utils::{get_edge_vector, get_vertex_vector};
 
 #[derive(Debug)]
 pub struct GraphSetParseError {
@@ -20,6 +24,8 @@ impl fmt::Display for GraphSetParseError {
 pub struct Graph {
     pub id: usize,
     pub vertices: Vec<Vertex>,
+    vertex_vector: OnceLock<Arc<HashMap<usize, usize>>>,
+    edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize), usize>>>,
 }
 
 impl Graph {
@@ -27,6 +33,8 @@ impl Graph {
         Graph {
             id,
             vertices: Vec::with_capacity(32),
+            vertex_vector: OnceLock::new(),
+            edge_vector: OnceLock::new(),
         }
     }
 
@@ -56,6 +64,24 @@ impl Graph {
             .iter()
             .filter(|vertex| vertex.vertex_type == vertex_type)
             .collect()
+    }
+
+    pub fn get_vertex_vector(&self) -> Arc<HashMap<usize, usize>> {
+        self.vertex_vector
+            .get_or_init(|| {
+                let map = get_vertex_vector(self);
+                Arc::new(map)
+            })
+            .clone()
+    }
+
+    pub fn get_edge_vector(&self) -> Arc<HashMap<(usize, usize, usize), usize>> {
+        self.edge_vector
+            .get_or_init(|| {
+                let map = get_edge_vector(self);
+                Arc::new(map)
+            })
+            .clone()
     }
 
     pub fn graphs_set_from_file<P>(path: P) -> Result<Vec<Graph>, GraphSetParseError>
