@@ -131,5 +131,8 @@ fn main() {
             file.write_all(line.as_bytes())
                 .expect("Failed to write to output file");
         }
+        if !silence {
+            println!("Result exported to {}", args.output);
+        }
     }
 }
