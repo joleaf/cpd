@@ -42,12 +42,12 @@ pub fn get_vertex_vector(graph: &Graph) -> HashMap<usize, usize> {
     result
 }
 
-pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize), usize> {
+pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize, usize), usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
         v.edges.iter().for_each(|e| {
             let to_label = graph.vertices.get(e.to).unwrap().label;
-            *result.entry((v.label, to_label)).or_insert(0) += 1;
+            *result.entry((v.label, to_label, e.e_label)).or_insert(0) += 1;
         });
     });
     result
@@ -119,9 +119,9 @@ mod tests {
         graph.vertices.get_mut(3).unwrap().push(2, 0);
         let edge_vector = get_edge_vector(&graph);
         assert_eq!(edge_vector.len(), 4);
-        assert_eq!(edge_vector[&(1, 2)], 1);
-        assert_eq!(edge_vector[&(1, 3)], 1);
-        assert_eq!(edge_vector[&(2, 2)], 1);
-        assert_eq!(edge_vector[&(2, 3)], 2);
+        assert_eq!(edge_vector[&(1, 2, 0)], 1);
+        assert_eq!(edge_vector[&(1, 3, 0)], 1);
+        assert_eq!(edge_vector[&(2, 2, 0)], 1);
+        assert_eq!(edge_vector[&(2, 3, 0)], 2);
     }
 }

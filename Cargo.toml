@@ -1,6 +1,6 @@
 [package]
 name = "cpd"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
 license = "MIT"
@@ -11,7 +11,7 @@ homepage = "https://github.com/joleaf/cpd"
 keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph']
 categories = ["algorithms", "command-line-utilities"]
 exclude = [
-    "graphs.txt",
+    "test_data/*",
 ]
 
 [dependencies]

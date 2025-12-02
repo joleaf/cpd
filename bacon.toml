@@ -81,7 +81,7 @@ on_success = "back" # so that we don't open the browser at each change
 [jobs.run]
 command = [
     "cargo", "run", "--release", "--", 
-      "--input", "graphs.txt", 
+      "--input", "test_data/graphs.txt", 
       "--activity-vertex-type", "3",
       "--object-vertex-types", "1", 
       "--support-exact", "2", 
@@ -97,13 +97,30 @@ background = true
 
 [jobs.run-small]
 command = [
-    "cargo", "run", "--release", "--", 
-      "--input", "graphs_small.txt", 
+    "cargo", "run",  "--", 
+      "--input", "test_data/graphs_small.txt", 
       "--activity-vertex-type", "1",
-      "--object-vertex-types", "6", "7", 
+      "--object-vertex-types", "7", "10", 
       "--support-exact", "2", 
       "--support-relaxed", "3", 
       "--relaxed-threshold", "0.8",
+      "--min-vertices", "3",
+      "--max-vertices", "3"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-sim]
+command = [
+    "cargo", "run",  "--", 
+      "--input", "test_data/graphs_sim.txt", 
+      "--activity-vertex-type", "0",
+      "--object-vertex-types", "1", 
+      "--support-exact", "2", 
+      "--support-relaxed", "9999", 
+      "--relaxed-threshold", "1.00",
       "--min-vertices", "3",
       "--max-vertices", "3"
     # put launch parameters for your program behind a `--` separator
@@ -149,4 +166,4 @@ allow_warnings = true
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 # p = "job:pedantic" 
-e = "job:run-small" 
+e = "job:run-sim" 

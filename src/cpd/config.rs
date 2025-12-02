@@ -127,8 +127,8 @@ impl CPDConfig {
         let now = Instant::now();
         let candidates = self.algo_candidate_generation.get_candidates(graphs);
         let delta = now.elapsed().as_millis();
-        let all_candidates: Vec<_> = candidates.iter().flatten().collect();
         if !self.silence {
+            let all_candidates: Vec<_> = candidates.iter().flatten().collect();
             println!(
                 " -> Found {} candidates; took {}ms",
                 all_candidates.len(),

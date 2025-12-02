@@ -87,10 +87,10 @@ e 10 12 1
 ```
 
 ### Run cpd
-Example [graph database](./graphs.txt):
+Example [graph database](./test_data/graphs.txt):
 ```shell
 cpd \
-    --input graphs.txt \
+    --input test_data/graphs.txt \
     --activity-vertex-type 3 \
     --object-vertex-types 1 \
     --support-exact 2 \
@@ -101,10 +101,10 @@ cpd \
     --output out.txt
 ```
 
-Example [small graph database](./graphs_small.txt) (only 4 graphs):
+Example [small graph database](./test_data/graphs_small.txt) (only 4 graphs):
 ```shell
 cpd \
-    --input graphs_small.txt \
+    --input test_data/graphs_small.txt \
     --activity-vertex-type 1 \
     --object-vertex-types 6 7 \
     --support-exact 2 \

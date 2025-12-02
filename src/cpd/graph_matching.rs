@@ -30,7 +30,7 @@ use crate::data::{
 ///
 /// After computing the similarity `sim ∈ [0, 1]`:
 ///
-/// - `sim == 1.0` → `ExactMatch`  
+/// - `sim == 1.0` → `ExactMatch` (Important: This does not mean that the graphs are IDENDICAL!)
 /// - `sim >= matching_threshold` → `RelaxedMatch`  
 /// - otherwise → `NoMatch`
 ///
@@ -80,7 +80,8 @@ impl AlgoGraphMatching {
     ///
     /// A floating-point similarity value in the range `[0.0, 1.0]`, where:
     ///
-    /// - `1.0` represents identical graphs (based on vertex & edge vectors)
+    /// - `1.0` represents very similar graphs (based on vertex & edge vectors) (but not necessary
+    ///   identical graphs)
     /// - `0.0` represents complete dissimilarity
     ///
     /// The meaning of the distance depends on the specific matching algorithm:
@@ -155,7 +156,7 @@ impl AlgoGraphMatching {
                 alpha: _,
                 matching_threshold,
             } => {
-                if distance == 1.0f32 {
+                if distance == 1.0 {
                     MatchingResult::ExactMatch
                 } else if &distance >= matching_threshold {
                     MatchingResult::RelaxedMatch

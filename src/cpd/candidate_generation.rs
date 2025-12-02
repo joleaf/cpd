@@ -106,7 +106,7 @@ fn get_fully_connected_candidates(
 ) -> Vec<Vec<Graph>> {
     graphs
         .par_iter() // Parallel processing
-        //.iter()
+        // .iter()
         .map(|g| {
             _get_fully_connected_candidates_of_graph(
                 g,
@@ -162,11 +162,12 @@ fn _get_fully_connected_candidates_of_graph(
                             let new_object_vertex_id = match vertex_id_mapping.get(&to_vertex.id) {
                                 Some(id) => *id,
                                 None => {
-                                    let v = new_candidate.create_vertex_with_data(
+                                    let new_vertex = new_candidate.create_vertex_with_data(
                                         to_vertex.label,
                                         to_vertex.vertex_type,
                                     );
-                                    v.id
+                                    vertex_id_mapping.insert(to_vertex.id, new_vertex.id);
+                                    new_vertex.id
                                 }
                             };
                             new_candidate
@@ -196,12 +197,8 @@ mod tests {
     use crate::data::graph::Graph;
 
     fn make_basic_graph() -> Graph {
-        // Vertex types:
-        // type 2 = activity
-        // type 4 = object
         let mut g = Graph::new(1);
 
-        // Activity vertices
         g.create_vertex_with_data(1, 2); // id 0
         g.create_vertex_with_data(2, 2); // id 1
         g.create_vertex_with_data(3, 2); // id 2
@@ -234,10 +231,8 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g]);
 
-        assert_eq!(result.len(), 1); // one input graph → one Vec<Graph>
-        assert_eq!(result[0].len(), 2); // possible pairs among 3 activities = 3C2 = 3
-
-        // All pairs are connected in the constructed graph
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].len(), 2);
     }
 
     #[test]
@@ -277,13 +272,11 @@ mod tests {
         let result = algo.get_candidates(&vec![g]);
         let candidates = &result[0];
 
-        // find the candidate that includes vertex original id 1 (the one that links to object 3)
         let candidate: &Graph = candidates
             .iter()
             .find(|c| c.vertices.iter().any(|v| v.label == 2))
             .unwrap();
 
-        // Ensure object vertex exists
         assert!(
             candidate.vertices.iter().any(|v| v.vertex_type == 4),
             "Candidate must include object vertices connected to selected activities"
@@ -303,7 +296,6 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g]);
 
-        // Only one possible combination of size 3
         assert_eq!(result[0].len(), 1);
     }
 
@@ -321,10 +313,7 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g1, g2]);
 
-        // one vec per graph
         assert_eq!(result.len(), 2);
-
-        // each graph should yield 3 candidates (3C2)
         assert_eq!(result[0].len(), 2);
         assert_eq!(result[1].len(), 2);
     }
