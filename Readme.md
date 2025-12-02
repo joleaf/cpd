@@ -87,6 +87,7 @@ e 10 12 1
 ```
 
 ### Run cpd
+Example [graph database](./graphs.txt):
 ```shell
 cpd \
     --input graphs.txt \
@@ -94,12 +95,25 @@ cpd \
     --object-vertex-types 1 \
     --support-exact 2 \
     --support-relaxed 5 \
-    --relaxed-threshold 0.5 \
+    --relaxed-threshold 0.6 \
     --min-vertices 3 \
     --max-vertices 3 \
     --output out.txt
 ```
 
+Example [small graph database](./graphs_small.txt) (only 4 graphs):
+```shell
+cpd \
+    --input graphs_small.txt \
+    --activity-vertex-type 1 \
+    --object-vertex-types 6 7 \
+    --support-exact 2 \
+    --support-relaxed 3 \
+    --relaxed-threshold 0.8 \
+    --min-vertices 3 \
+    --max-vertices 3 \
+    --output out_small.txt
+```
 The parameter `--activity-vertex-type` specifies which vertex type is treated as an activity node; CPD will only generate pattern candidates where these activity vertices form a fully connected subgraph.
 The parameter `--object-vertex-types` defines which vertex types represent context nodes, meaning they provide additional structural or semantic information that surrounds the activity pattern.
 Together, these settings ensure that discovered patterns always contain a cohesive activity core enriched with contextual object information.
