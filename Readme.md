@@ -1,3 +1,7 @@
+[![Crates.io](https://img.shields.io/crates/v/cpd.svg)](https://crates.io/crates/cpd)
+[![Downloads](https://img.shields.io/crates/d/cpd.svg)](https://crates.io/crates/cpd)
+[![Documentation](https://docs.rs/cpd/badge.svg)](https://docs.rs/cpd)
+
 # CPD
 
 **Collaboration Pattern Discovery (CPD)* is a subgraph mining algorithm that searches for patterns in a graph database.
@@ -101,7 +105,7 @@ cpd \
     --output out.txt
 ```
 
-Example [small graph database](./test_data/graphs_small.txt) (only 4 graphs):
+Example [small graph database](./test_data/graphs_small.txt) (only 5 graphs):
 ```shell
 cpd \
     --input test_data/graphs_small.txt \
