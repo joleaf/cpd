@@ -27,7 +27,8 @@ use std::{
 ///
 /// After computing the similarity `sim ∈ [0, 1]`:
 ///
-/// - `sim == 1.0` → `ExactMatch` (Important: This does not mean that the graphs are IDENDICAL!)
+/// - `sim == 1.0` → `ExactMatch` or `RelaxedMatch` (Important: This does not mean that the graphs are IDENDICAL!)
+///   The ExactMatch is only returned if the VF2IsomorphismTest also returns `ExactMatch`
 /// - `sim >= matching_threshold` → `RelaxedMatch`  
 /// - otherwise → `NoMatch`
 ///
@@ -118,9 +119,13 @@ impl AlgoGraphMatching {
     ///
     /// Let `sim = calc_distance(one_graph, other_graph)`:
     ///
-    /// - If `sim == 1.0` → `MatchingResult::ExactMatch`
+    /// - If `sim == 1.0` → `MatchingResult::ExactMatch` iff VF2IsomorphismTest also returns 1.0
+    ///   Else `MatchingResult::RelaxedMatch`:w
+    ///
     /// - Else if `sim >= matching_threshold` → `MatchingResult::RelaxedMatch`
     /// - Else → `MatchingResult::NoMatch`
+    ///
+    /// For VF2IsomorphismTest, the result is either `ExactMatch` or `NoMatch`.
     ///
     /// # Parameters
     ///
@@ -156,7 +161,13 @@ impl AlgoGraphMatching {
                 matching_threshold,
             } => {
                 if distance == 1.0 {
-                    MatchingResult::ExactMatch
+                    if AlgoGraphMatching::VF2IsomorphismTest.match_graphs(one_graph, other_graph)
+                        == MatchingResult::ExactMatch
+                    {
+                        MatchingResult::ExactMatch
+                    } else {
+                        MatchingResult::RelaxedMatch
+                    }
                 } else if &distance >= matching_threshold {
                     MatchingResult::RelaxedMatch
                 } else {
@@ -224,7 +235,7 @@ fn graph_vf2_isomorphism(one_graph: &Graph, other_graph: &Graph) -> f32 {
     let iso_exists =
         is_isomorphic_matching(&*one_di_graph, &*other_di_graph, node_match, edge_match);
 
-    if iso_exists { 1.0 } else { -1.0 }
+    if iso_exists { 1.0 } else { 0.0 }
 }
 
 #[cfg(test)]
