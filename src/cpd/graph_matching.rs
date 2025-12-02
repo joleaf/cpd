@@ -1,9 +1,9 @@
+use crate::data::graph::Graph;
+use petgraph::algo::isomorphism::is_isomorphic_matching;
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
-
-use crate::data::graph::Graph;
 
 /// Defines the available algorithms for comparing two graphs and determining
 /// how similar they are.
@@ -55,6 +55,7 @@ use crate::data::graph::Graph;
 #[derive(Debug)]
 pub enum AlgoGraphMatching {
     CosineSimilarity { alpha: f32, matching_threshold: f32 },
+    VF2IsomorphismTest,
 }
 
 /// Result of comparing two graphs with the selected graph-matching algorithm.
@@ -107,6 +108,7 @@ impl AlgoGraphMatching {
                 alpha,
                 matching_threshold: _,
             } => graph_cosine_similarity(one_graph, other_graph, alpha),
+            AlgoGraphMatching::VF2IsomorphismTest => graph_vf2_isomorphism(one_graph, other_graph),
         }
     }
 
@@ -161,6 +163,13 @@ impl AlgoGraphMatching {
                     MatchingResult::NoMatch
                 }
             }
+            AlgoGraphMatching::VF2IsomorphismTest => {
+                if distance == 1.0 {
+                    MatchingResult::ExactMatch
+                } else {
+                    MatchingResult::NoMatch
+                }
+            }
         }
     }
 }
@@ -201,6 +210,21 @@ fn _calc_cosine_similarity<T: Eq + Hash>(
     }
 
     dot / (norm_one.sqrt() * norm_other.sqrt())
+}
+
+fn graph_vf2_isomorphism(one_graph: &Graph, other_graph: &Graph) -> f32 {
+    let one_di_graph = one_graph.get_digraph();
+    let other_di_graph = other_graph.get_digraph();
+    let node_match = |a: &(usize, usize), b: &(usize, usize)| -> bool { a.0 == b.0 && a.1 == b.1 };
+
+    // Edge matcher compares edge labels (usize)
+    let edge_match = |a: &usize, b: &usize| -> bool { a == b };
+
+    // VF2 returns an iterator; if any mapping exists → isomorphic
+    let iso_exists =
+        is_isomorphic_matching(&*one_di_graph, &*other_di_graph, node_match, edge_match);
+
+    if iso_exists { 1.0 } else { -1.0 }
 }
 
 #[cfg(test)]
@@ -274,6 +298,49 @@ mod tests {
             }
             .match_graphs(&one_graph, &other_graph,),
             MatchingResult::RelaxedMatch
+        );
+    }
+
+    #[test]
+    fn test_vf2() {
+        let mut one_graph = Graph::new(1);
+        one_graph.create_vertex_with_data(1, 2);
+        one_graph.create_vertex_with_data(2, 2);
+        one_graph.create_vertex_with_data(3, 4);
+        one_graph.create_vertex_with_data(4, 2);
+        one_graph.vertices.get_mut(0).unwrap().push(1, 0);
+        one_graph.vertices.get_mut(0).unwrap().push(2, 0);
+        one_graph.vertices.get_mut(1).unwrap().push(2, 0);
+        one_graph.vertices.get_mut(1).unwrap().push(3, 0);
+        one_graph.vertices.get_mut(3).unwrap().push(2, 0);
+        let mut other_eq_graph = Graph::new(1);
+        other_eq_graph.create_vertex_with_data(1, 2);
+        other_eq_graph.create_vertex_with_data(2, 2);
+        other_eq_graph.create_vertex_with_data(3, 4);
+        other_eq_graph.create_vertex_with_data(4, 2);
+        other_eq_graph.vertices.get_mut(0).unwrap().push(1, 0);
+        other_eq_graph.vertices.get_mut(0).unwrap().push(2, 0);
+        other_eq_graph.vertices.get_mut(1).unwrap().push(2, 0);
+        other_eq_graph.vertices.get_mut(1).unwrap().push(3, 0);
+        other_eq_graph.vertices.get_mut(3).unwrap().push(2, 0);
+        assert_eq!(
+            AlgoGraphMatching::VF2IsomorphismTest.match_graphs(&one_graph, &other_eq_graph,),
+            MatchingResult::ExactMatch
+        );
+
+        let mut other_graph = Graph::new(1);
+        other_graph.create_vertex_with_data(2, 2);
+        other_graph.create_vertex_with_data(3, 2);
+        other_graph.create_vertex_with_data(1, 4);
+        other_graph.create_vertex_with_data(2, 2);
+        other_graph.vertices.get_mut(0).unwrap().push(3, 0);
+        other_graph.vertices.get_mut(0).unwrap().push(2, 0);
+        other_graph.vertices.get_mut(1).unwrap().push(2, 0);
+        other_graph.vertices.get_mut(1).unwrap().push(3, 0);
+        other_graph.vertices.get_mut(3).unwrap().push(2, 0);
+        assert_eq!(
+            AlgoGraphMatching::VF2IsomorphismTest.match_graphs(&one_graph, &other_graph,),
+            MatchingResult::NoMatch
         );
     }
 }

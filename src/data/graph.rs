@@ -1,3 +1,5 @@
+use petgraph::graph::DiGraph;
+
 use crate::data::edge::Edge;
 use crate::data::vertex::Vertex;
 use std::collections::HashMap;
@@ -26,6 +28,7 @@ pub struct Graph {
     pub vertices: Vec<Vertex>,
     vertex_vector: OnceLock<Arc<HashMap<usize, usize>>>,
     edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize), usize>>>,
+    digraph: OnceLock<Arc<DiGraph<(usize, usize), usize>>>,
 }
 
 impl Graph {
@@ -35,6 +38,7 @@ impl Graph {
             vertices: Vec::with_capacity(32),
             vertex_vector: OnceLock::new(),
             edge_vector: OnceLock::new(),
+            digraph: OnceLock::new(),
         }
     }
 
@@ -82,6 +86,35 @@ impl Graph {
                 Arc::new(map)
             })
             .clone()
+    }
+
+    /// Returns an Arc-wrapped digraph, building it on first use.
+    pub fn get_digraph(&self) -> Arc<DiGraph<(usize, usize), usize>> {
+        self.digraph
+            .get_or_init(|| Arc::new(Self::build_digraph(self)))
+            .clone()
+    }
+
+    fn build_digraph(&self) -> DiGraph<(usize, usize), usize> {
+        let mut g = DiGraph::new();
+
+        let mut vertex_index_map = Vec::with_capacity(self.vertices.len());
+        // Add vertices
+        for v in &self.vertices {
+            let idx = g.add_node((v.label, v.vertex_type));
+            vertex_index_map.push(idx);
+        }
+
+        // Insert edges
+        for v in &self.vertices {
+            let from_idx = vertex_index_map[v.id];
+
+            for e in &v.edges {
+                let to_idx = vertex_index_map[e.to];
+                g.add_edge(from_idx, to_idx, e.e_label);
+            }
+        }
+        g
     }
 
     pub fn graphs_set_from_file<P>(path: P) -> Result<Vec<Graph>, GraphSetParseError>
@@ -344,6 +377,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use petgraph::visit::EdgeRef;
     use std::time::Instant;
 
     #[test]
@@ -365,7 +399,7 @@ mod tests {
     #[test]
     fn test_load_graphs_from_file() {
         let _now = Instant::now();
-        let graphs = Graph::graphs_set_from_file("graphs.txt");
+        let graphs = Graph::graphs_set_from_file("test_data/graphs.txt");
         match graphs {
             Ok(ref graphs) => {
                 println!("All good parsing input file, found {} graphs", graphs.len());
@@ -375,5 +409,42 @@ mod tests {
         let _graphs = graphs.unwrap();
         let delta = _now.elapsed().as_millis();
         println!("Took {}ms", delta);
+    }
+
+    #[test]
+    fn test_build_digraph() {
+        let mut graph = Graph::new(1);
+        graph.create_vertex_with_data(1, 2);
+        graph.create_vertex_with_data(2, 2);
+        graph.create_vertex_with_data(3, 4);
+        graph.vertices.get_mut(0).unwrap().push(1, 0);
+        graph.vertices.get_mut(0).unwrap().push(2, 0);
+        graph.vertices.get_mut(1).unwrap().push(2, 0);
+        let di_graph = graph.get_digraph();
+        assert_eq!(di_graph.node_count(), 3);
+
+        // Check node weights
+        let nodes: Vec<_> = di_graph.node_weights().collect();
+        assert!(nodes.contains(&&(1, 2)));
+        assert!(nodes.contains(&&(2, 2)));
+        assert!(nodes.contains(&&(3, 4)));
+
+        // Check edges
+        let mut edges = di_graph
+            .edge_references()
+            .map(|e| (e.source().index(), e.target().index(), *e.weight()))
+            .collect::<Vec<_>>();
+
+        // Sort for consistent order
+        edges.sort();
+
+        // Expected edges (source_index, target_index, weight)
+        let expected_edges = vec![(0, 1, 0), (0, 2, 0), (1, 2, 0)];
+
+        assert_eq!(edges, expected_edges);
+
+        // Check lazy caching: multiple calls return same Arc
+        let di_graph2 = graph.get_digraph();
+        assert!(Arc::ptr_eq(&di_graph, &di_graph2));
     }
 }
