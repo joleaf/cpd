@@ -52,6 +52,10 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     max_vertices: usize,
 
+    /// Maximum number of the main vertices
+    #[arg(long, default_value_t = 0.5f32)]
+    alpha: f32,
+
     /// Supress debug statements
     #[arg(long, default_value_t = false)]
     silence: bool,
@@ -68,8 +72,15 @@ fn main() {
     }
     if args.min_vertices > args.max_vertices {
         println!(
-            "Min number of activity vertices ({}) > Max number of activity vertices ({})!",
+            "Parameter error! Min number of activity vertices ({}) > Max number of activity vertices ({})!",
             args.min_vertices, args.max_vertices
+        );
+        return;
+    }
+    if args.alpha > 1.0 || args.alpha < 0.0 {
+        println!(
+            "Parameter error! Alpha should be 0.0 <= alpha <= 1.0, is {}",
+            args.alpha
         );
         return;
     }
@@ -92,7 +103,7 @@ fn main() {
             max_number_of_activity_vertices: args.max_vertices,
         },
         AlgoGraphMatching::CosineSimilarity {
-            alpha: 0.5,
+            alpha: args.alpha,
             matching_threshold: args.relaxed_threshold,
         },
         args.support_exact,

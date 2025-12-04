@@ -86,9 +86,9 @@ command = [
       "--object-vertex-types", "1", 
       "--support-exact", "2", 
       "--support-relaxed", "5", 
-      "--relaxed-threshold", "0.9",
-      "--min-vertices", "3",
-      "--max-vertices", "3"
+      "--relaxed-threshold", "1.0",
+      "--min-vertices", "4",
+      "--max-vertices", "4"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true
@@ -128,6 +128,18 @@ command = [
 need_stdout = true
 allow_warnings = true
 background = true
+
+
+
+[jobs.run-help]
+command = [
+    "cargo", "run",  "--", "--help"
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+
 # Run your long-running application (eg server) and have the result displayed in bacon.
 # For programs that never stop (eg a server), `background` is set to false
 # to have the cargo run output immediately displayed instead of waiting for
@@ -167,3 +179,4 @@ allow_warnings = true
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 # p = "job:pedantic" 
 e = "job:run-sim" 
+q = "job:run-help" 
