@@ -8,10 +8,6 @@
 The algorithm does not only look for exact matches; it can also explore a relaxed search space.
 Furthermore, based on the defined vertex_types, the algorithm identifies context-aware patterns.
 
-## WARNING
-
-**THIS PROJECT IS WIP!**
-
 ## Usage
 
 ### Install
@@ -102,6 +98,7 @@ cpd \
     --relaxed-threshold 0.6 \
     --min-vertices 3 \
     --max-vertices 3 \
+    --alpha 0.5 \
     --output out.txt
 ```
 
@@ -116,6 +113,7 @@ cpd \
     --relaxed-threshold 0.8 \
     --min-vertices 3 \
     --max-vertices 3 \
+    --alpha 0.5 \
     --output out_small.txt
 ```
 The parameter `--activity-vertex-type` specifies which vertex type is treated as an activity node; CPD will only generate pattern candidates where these activity vertices form a fully connected subgraph.
@@ -128,45 +126,36 @@ cpd --help
 ```
 
 ```shell
-A tool to search frequent subgraphs in a graph database
+A tool to search for context-aware and relaxed frequent subgraphs in a graph database
 
-Usage: cpd [OPTIONS] --input <INPUT>
+ Usage: cpd [OPTIONS] --input <INPUT>
 
-Options:
-  -i, --input <INPUT>
-          Input file with the graph database
-  -o, --output <OUTPUT>
-          Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be printed to the console after processing finished with ###### [default: stdout]
-      --support-exact <SUPPORT_EXACT>
-          Min exact support [default: 2]
-      --support-relaxed <SUPPORT_RELAXED>
-          Min relaxed support [default: 2]
-      --relaxed-threshold <RELAXED_THRESHOLD>
-          Relaxed threshold [default: 0]
-      --activity-vertex-type <ACTIVITY_VERTEX_TYPE>
-          Activity vertex type [default: 0]
-      --object-vertex-types [<OBJECT_VERTEX_TYPES>...]
-          Object vertex types
-      --min-vertices <MIN_VERTICES>
-          Minimum number of main vertices [default: 4]
-      --max-vertices <MAX_VERTICES>
-          Maximum number of the main vertices [default: 5]
-      --silence
-          Supress debug statements
-  -h, --help
-          Print help
-  -V, --version
-          Print version  
-```
-
-## Performance tests
-
-tba
-
-## Dev & Build
-
-Install [rustup](https://rustup.rs/) (cargo) and run:
-
-```shell
-RUSTFLAGS="-C target-cpu=native" cargo build --release --all-features && cp target/release/cpd .
+ Options:
+   -i, --input <INPUT>
+           Input file with the graph database
+   -o, --output <OUTPUT>
+           Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be pri
+ nted to the console after processing finished with ###### [default: stdout]
+       --support-exact <SUPPORT_EXACT>
+           Min exact support [default: 2]
+       --support-relaxed <SUPPORT_RELAXED>
+           Min relaxed support [default: 2]
+       --relaxed-threshold <RELAXED_THRESHOLD>
+           Relaxed threshold [default: 0]
+       --activity-vertex-type <ACTIVITY_VERTEX_TYPE>
+           Activity vertex type [default: 0]
+       --object-vertex-types [<OBJECT_VERTEX_TYPES>...]
+           Object vertex types
+       --min-vertices <MIN_VERTICES>
+           Minimum number of main vertices [default: 4]
+       --max-vertices <MAX_VERTICES>
+           Maximum number of the main vertices [default: 5]
+       --alpha <ALPHA>
+           Maximum number of the main vertices [default: 0.5]
+       --silence
+           Supress debug statements
+   -h, --help
+           Print help
+   -V, --version
+           Print version
 ```
