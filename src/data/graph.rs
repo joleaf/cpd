@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
-use std::{fmt, io};
+use std::{fmt, io, usize};
 
 use super::utils::{get_edge_vector, get_vertex_vector};
 
@@ -27,7 +27,7 @@ pub struct Graph {
     pub id: usize,
     pub vertices: Vec<Vertex>,
     vertex_vector: OnceLock<Arc<HashMap<usize, usize>>>,
-    edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize), usize>>>,
+    edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize, usize, usize), usize>>>,
     digraph: OnceLock<Arc<DiGraph<(usize, usize), usize>>>,
 }
 
@@ -79,7 +79,7 @@ impl Graph {
             .clone()
     }
 
-    pub fn get_edge_vector(&self) -> Arc<HashMap<(usize, usize, usize), usize>> {
+    pub fn get_edge_vector(&self) -> Arc<HashMap<(usize, usize, usize, usize, usize), usize>> {
         self.edge_vector
             .get_or_init(|| {
                 let map = get_edge_vector(self);

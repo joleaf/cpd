@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    usize,
+};
 
 use crate::data::edge::Edge;
 
@@ -42,12 +45,16 @@ pub fn get_vertex_vector(graph: &Graph) -> HashMap<usize, usize> {
     result
 }
 
-pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize, usize), usize> {
+pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize, usize, usize, usize), usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
         v.edges.iter().for_each(|e| {
-            let to_label = graph.vertices.get(e.to).unwrap().label;
-            *result.entry((v.label, to_label, e.e_label)).or_insert(0) += 1;
+            let to = graph.vertices.get(e.to).unwrap();
+            let to_label = to.label;
+            let to_type = to.vertex_type;
+            *result
+                .entry((v.label, v.vertex_type, e.e_label, to_label, to_type))
+                .or_insert(0) += 1;
         });
     });
     result
@@ -108,20 +115,20 @@ mod tests {
     #[test]
     fn test_edge_vector() {
         let mut graph = Graph::new(1);
-        graph.create_vertex_with_data(1, 2);
-        graph.create_vertex_with_data(2, 2);
-        graph.create_vertex_with_data(3, 4);
-        graph.create_vertex_with_data(2, 2);
-        graph.vertices.get_mut(0).unwrap().push(1, 0);
-        graph.vertices.get_mut(0).unwrap().push(2, 0);
-        graph.vertices.get_mut(1).unwrap().push(2, 0);
-        graph.vertices.get_mut(1).unwrap().push(3, 0);
-        graph.vertices.get_mut(3).unwrap().push(2, 0);
+        graph.create_vertex_with_data(1, 2); // 0
+        graph.create_vertex_with_data(2, 2); // 1
+        graph.create_vertex_with_data(3, 4); // 2
+        graph.create_vertex_with_data(2, 2); // 3
+        graph.vertices.get_mut(0).unwrap().push(1, 1);
+        graph.vertices.get_mut(0).unwrap().push(2, 2);
+        graph.vertices.get_mut(1).unwrap().push(2, 3);
+        graph.vertices.get_mut(1).unwrap().push(3, 4);
+        graph.vertices.get_mut(3).unwrap().push(3, 4);
         let edge_vector = get_edge_vector(&graph);
         assert_eq!(edge_vector.len(), 4);
-        assert_eq!(edge_vector[&(1, 2, 0)], 1);
-        assert_eq!(edge_vector[&(1, 3, 0)], 1);
-        assert_eq!(edge_vector[&(2, 2, 0)], 1);
-        assert_eq!(edge_vector[&(2, 3, 0)], 2);
+        assert_eq!(edge_vector[&(1, 2, 1, 2, 2)], 1);
+        assert_eq!(edge_vector[&(1, 2, 2, 3, 4)], 1);
+        assert_eq!(edge_vector[&(2, 2, 3, 3, 4)], 1);
+        assert_eq!(edge_vector[&(2, 2, 4, 2, 2)], 2);
     }
 }
