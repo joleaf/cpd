@@ -155,7 +155,6 @@ impl AlgoGraphMatching {
     /// ```
     pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
-        println!("{distance}");
         match self {
             AlgoGraphMatching::CosineSimilarity {
                 alpha: _,
