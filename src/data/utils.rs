@@ -37,10 +37,10 @@ pub fn vertices_are_connected(vertices: &Vec<&Vertex>) -> bool {
 
 // Maybe implement caching for the two functions: https://stackoverflow.com/questions/36230889/what-is-the-idiomatic-way-to-implement-caching-on-a-function-that-is-not-a-struc
 
-pub fn get_vertex_vector(graph: &Graph) -> HashMap<usize, usize> {
+pub fn get_vertex_vector(graph: &Graph) -> HashMap<(usize, usize), usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
-        *result.entry(v.label).or_insert(0) += 1;
+        *result.entry((v.label, v.vertex_type)).or_insert(0) += 1;
     });
     result
 }
@@ -107,9 +107,9 @@ mod tests {
         graph.vertices.get_mut(3).unwrap().push(2, 0);
         let vertex_vector = get_vertex_vector(&graph);
         assert_eq!(vertex_vector.len(), 3);
-        assert_eq!(vertex_vector[&1], 1);
-        assert_eq!(vertex_vector[&2], 2);
-        assert_eq!(vertex_vector[&3], 1);
+        assert_eq!(vertex_vector[&(1, 2)], 1);
+        assert_eq!(vertex_vector[&(2, 2)], 2);
+        assert_eq!(vertex_vector[&(3, 4)], 1);
     }
 
     #[test]

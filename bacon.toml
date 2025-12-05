@@ -88,7 +88,8 @@ command = [
       "--support-relaxed", "5", 
       "--relaxed-threshold", "1.0",
       "--min-vertices", "4",
-      "--max-vertices", "4"
+      "--max-vertices", "4",
+      "--alpha", "0.5"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true

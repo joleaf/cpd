@@ -155,6 +155,7 @@ impl AlgoGraphMatching {
     /// ```
     pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
+        println!("{distance}");
         match self {
             AlgoGraphMatching::CosineSimilarity {
                 alpha: _,
@@ -168,7 +169,7 @@ impl AlgoGraphMatching {
                     } else {
                         MatchingResult::RelaxedMatch
                     }
-                } else if &distance >= matching_threshold {
+                } else if distance >= *matching_threshold {
                     MatchingResult::RelaxedMatch
                 } else {
                     MatchingResult::NoMatch
@@ -284,11 +285,11 @@ mod tests {
         );
 
         let mut other_graph = Graph::new(1);
+        other_graph.create_vertex_with_data(1, 2);
         other_graph.create_vertex_with_data(2, 2);
-        other_graph.create_vertex_with_data(3, 2);
-        other_graph.create_vertex_with_data(1, 4);
-        other_graph.create_vertex_with_data(2, 2);
-        other_graph.vertices.get_mut(0).unwrap().push(3, 0);
+        other_graph.create_vertex_with_data(5, 4);
+        other_graph.create_vertex_with_data(4, 2);
+        other_graph.vertices.get_mut(0).unwrap().push(1, 0);
         other_graph.vertices.get_mut(0).unwrap().push(2, 0);
         other_graph.vertices.get_mut(1).unwrap().push(2, 0);
         other_graph.vertices.get_mut(1).unwrap().push(3, 0);
@@ -297,17 +298,17 @@ mod tests {
         assert_eq!(
             AlgoGraphMatching::CosineSimilarity {
                 alpha: 0.5,
-                matching_threshold: 0.5
+                matching_threshold: 0.6
             }
-            .match_graphs(&one_graph, &other_graph,),
+            .match_graphs(&one_graph, &other_graph),
             MatchingResult::NoMatch
         );
         assert_eq!(
             AlgoGraphMatching::CosineSimilarity {
                 alpha: 0.5,
-                matching_threshold: 0.4
+                matching_threshold: 0.5
             }
-            .match_graphs(&one_graph, &other_graph,),
+            .match_graphs(&one_graph, &other_graph),
             MatchingResult::RelaxedMatch
         );
     }

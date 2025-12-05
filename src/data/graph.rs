@@ -26,7 +26,7 @@ impl fmt::Display for GraphSetParseError {
 pub struct Graph {
     pub id: usize,
     pub vertices: Vec<Vertex>,
-    vertex_vector: OnceLock<Arc<HashMap<usize, usize>>>,
+    vertex_vector: OnceLock<Arc<HashMap<(usize, usize), usize>>>,
     edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize, usize, usize), usize>>>,
     digraph: OnceLock<Arc<DiGraph<(usize, usize), usize>>>,
 }
@@ -70,7 +70,7 @@ impl Graph {
             .collect()
     }
 
-    pub fn get_vertex_vector(&self) -> Arc<HashMap<usize, usize>> {
+    pub fn get_vertex_vector(&self) -> Arc<HashMap<(usize, usize), usize>> {
         self.vertex_vector
             .get_or_init(|| {
                 let map = get_vertex_vector(self);
