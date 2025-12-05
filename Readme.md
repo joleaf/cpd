@@ -126,7 +126,7 @@ cpd --help
 ```
 
 ```shell
-A tool to search for context-aware and relaxed frequent subgraphs in a graph database
+ A tool to search for context-aware and relaxed frequent subgraphs in a graph database
 
  Usage: cpd [OPTIONS] --input <INPUT>
 
@@ -134,8 +134,7 @@ A tool to search for context-aware and relaxed frequent subgraphs in a graph dat
    -i, --input <INPUT>
            Input file with the graph database
    -o, --output <OUTPUT>
-           Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be pri
- nted to the console after processing finished with ###### [default: stdout]
+           Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be printed to the console after processing finished with ###### [default: stdout]
        --support-exact <SUPPORT_EXACT>
            Min exact support [default: 2]
        --support-relaxed <SUPPORT_RELAXED>
@@ -151,7 +150,7 @@ A tool to search for context-aware and relaxed frequent subgraphs in a graph dat
        --max-vertices <MAX_VERTICES>
            Maximum number of the main vertices [default: 5]
        --alpha <ALPHA>
-           Maximum number of the main vertices [default: 0.5]
+           The alpha value between 0.0 and 1.0 defines the weight important for the vertex and edge vector: if 1.0, the edges are ignored; if 0.0, the vertices are ignored [default: 0.5]
        --silence
            Supress debug statements
    -h, --help
