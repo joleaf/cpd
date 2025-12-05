@@ -55,7 +55,7 @@ use std::{
 /// ```
 #[derive(Debug)]
 pub enum AlgoGraphMatching {
-    CosineSimilarity { alpha: f32, matching_threshold: f32 },
+    CosineSimilarity { alpha: f64, matching_threshold: f64 },
     VF2IsomorphismTest,
 }
 
@@ -103,12 +103,12 @@ impl AlgoGraphMatching {
     ///
     /// println!("Similarity = {}", distance);
     /// ```
-    pub fn calc_distance(&self, one_graph: &Graph, other_graph: &Graph) -> f32 {
+    pub fn calc_distance(&self, one_graph: &Graph, other_graph: &Graph) -> f64 {
         match self {
             AlgoGraphMatching::CosineSimilarity {
                 alpha,
                 matching_threshold: _,
-            } => graph_cosine_similarity(one_graph, other_graph, alpha),
+            } => graph_cosine_similarity(one_graph, other_graph, *alpha),
             AlgoGraphMatching::VF2IsomorphismTest => graph_vf2_isomorphism(one_graph, other_graph),
         }
     }
@@ -155,12 +155,13 @@ impl AlgoGraphMatching {
     /// ```
     pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
+        const EPS: f64 = 1e-8;
         match self {
             AlgoGraphMatching::CosineSimilarity {
                 alpha: _,
                 matching_threshold,
             } => {
-                if distance == 1.0 {
+                if distance >= 1.0 - EPS {
                     if AlgoGraphMatching::VF2IsomorphismTest.match_graphs(one_graph, other_graph)
                         == MatchingResult::ExactMatch
                     {
@@ -185,7 +186,7 @@ impl AlgoGraphMatching {
     }
 }
 
-fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: &f32) -> f32 {
+fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: f64) -> f64 {
     let one_graph_vertex_vector = one_graph.get_vertex_vector();
     let other_graph_vertex_vector = other_graph.get_vertex_vector();
     let one_graph_edge_vector = one_graph.get_edge_vector();
@@ -193,23 +194,23 @@ fn graph_cosine_similarity(one_graph: &Graph, other_graph: &Graph, alpha: &f32) 
     let sim_vertices =
         _calc_cosine_similarity(&one_graph_vertex_vector, &other_graph_vertex_vector);
     let sim_edges = _calc_cosine_similarity(&one_graph_edge_vector, &other_graph_edge_vector);
-    alpha * sim_vertices + (1.0f32 - alpha) * sim_edges
+    alpha * sim_vertices + (1.0 - alpha) * sim_edges
 }
 
 fn _calc_cosine_similarity<T: Eq + Hash>(
     one_vec: &HashMap<T, usize>,
     other_vec: &HashMap<T, usize>,
-) -> f32 {
+) -> f64 {
     let mut keys = HashSet::new();
     keys.extend(one_vec.keys());
     keys.extend(other_vec.keys());
-    let mut dot = 0.0f32;
-    let mut norm_one = 0.0f32;
-    let mut norm_other = 0.0f32;
+    let mut dot = 0.0f64;
+    let mut norm_one = 0.0f64;
+    let mut norm_other = 0.0f64;
 
     for key in keys {
-        let v1 = *one_vec.get(key).unwrap_or(&0) as f32;
-        let v2 = *other_vec.get(key).unwrap_or(&0) as f32;
+        let v1 = *one_vec.get(key).unwrap_or(&0) as f64;
+        let v2 = *other_vec.get(key).unwrap_or(&0) as f64;
 
         dot += v1 * v2;
         norm_one += v1 * v1;
@@ -223,7 +224,7 @@ fn _calc_cosine_similarity<T: Eq + Hash>(
     dot / (norm_one.sqrt() * norm_other.sqrt())
 }
 
-fn graph_vf2_isomorphism(one_graph: &Graph, other_graph: &Graph) -> f32 {
+fn graph_vf2_isomorphism(one_graph: &Graph, other_graph: &Graph) -> f64 {
     let one_di_graph = one_graph.get_digraph();
     let other_di_graph = other_graph.get_digraph();
     let node_match = |a: &(usize, usize), b: &(usize, usize)| -> bool { a.0 == b.0 && a.1 == b.1 };

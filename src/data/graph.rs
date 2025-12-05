@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
-use std::{fmt, io, usize};
+use std::{fmt, io};
 
 use super::utils::{get_edge_vector, get_vertex_vector};
 

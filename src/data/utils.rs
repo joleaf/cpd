@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    usize,
-};
+use std::collections::{HashMap, HashSet};
 
 use crate::data::edge::Edge;
 

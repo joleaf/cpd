@@ -1,5 +1,4 @@
 use crate::data::graph::Graph;
-use core::f32;
 use std::time::Instant;
 
 pub mod cpd;
@@ -33,8 +32,8 @@ struct Args {
     support_relaxed: usize,
 
     /// Relaxed threshold
-    #[arg(long, default_value_t = 0.0f32)]
-    relaxed_threshold: f32,
+    #[arg(long, default_value_t = 0.8)]
+    relaxed_threshold: f64,
 
     /// Activity vertex type
     #[arg(long, default_value_t = 0)]
@@ -54,8 +53,8 @@ struct Args {
 
     /// The alpha value between 0.0 and 1.0 defines the weight importantance of the vertex and edge
     /// vectors: if 1.0, the edges are ignored; if 0.0, the vertices are ignored
-    #[arg(long, default_value_t = 0.5f32)]
-    alpha: f32,
+    #[arg(long, default_value_t = 0.5)]
+    alpha: f64,
 
     /// Supress debug statements
     #[arg(long, default_value_t = false)]
