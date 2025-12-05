@@ -52,8 +52,8 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     max_vertices: usize,
 
-    /// The alpha value between 0.0 and 1.0 defines the weight important for the vertex and edge
-    /// vector: if 1.0, the edges are ignored; if 0.0, the vertices are ignored
+    /// The alpha value between 0.0 and 1.0 defines the weight importantance of the vertex and edge
+    /// vectors: if 1.0, the edges are ignored; if 0.0, the vertices are ignored
     #[arg(long, default_value_t = 0.5f32)]
     alpha: f32,
 

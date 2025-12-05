@@ -150,7 +150,7 @@ cpd --help
        --max-vertices <MAX_VERTICES>
            Maximum number of the main vertices [default: 5]
        --alpha <ALPHA>
-           The alpha value between 0.0 and 1.0 defines the weight important for the vertex and edge vector: if 1.0, the edges are ignored; if 0.0, the vertices are ignored [default: 0.5]
+           The alpha value between 0.0 and 1.0 defines the weight importantance of the vertex an d edge vectors: if 1.0, the edges are ignored; if 0.0, the vertices are ignored [default: 0.5]
        --silence
            Supress debug statements
    -h, --help
