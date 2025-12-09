@@ -1,6 +1,6 @@
 [package]
 name = "cpd"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2024"
 authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
 license = "MIT"
@@ -17,6 +17,7 @@ exclude = [
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 dashmap = "6.1.0"
+hungarian = "1.1.1"
 itertools = "0.14.0"
 petgraph = "0.8.3"
 rayon = "1.11.0"

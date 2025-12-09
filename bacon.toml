@@ -85,10 +85,11 @@ command = [
       "--activity-vertex-type", "3",
       "--object-vertex-types", "1", 
       "--support-exact", "2", 
-      "--support-relaxed", "9999", 
-      "--relaxed-threshold", "1.0",
-      "--min-vertices", "3",
-      "--max-vertices", "3",
+      "--support-relaxed", "4", 
+      "--graph-matching", "cosine",
+      "--relaxed-threshold", "0.95",
+      "--min-vertices", "4",
+      "--max-vertices", "4",
       "--alpha", "0.5"
     # put launch parameters for your program behind a `--` separator
 ]
@@ -104,6 +105,7 @@ command = [
       "--object-vertex-types", "7", "10", 
       "--support-exact", "2", 
       "--support-relaxed", "3", 
+      "--graph-matching", "vf2",
       "--relaxed-threshold", "0.8",
       "--min-vertices", "3",
       "--max-vertices", "3"
@@ -121,6 +123,7 @@ command = [
       "--object-vertex-types", "1", 
       "--support-exact", "2", 
       "--support-relaxed", "9999", 
+      "--graph-matching", "cosine",
       "--relaxed-threshold", "1.00",
       "--min-vertices", "3",
       "--max-vertices", "3"

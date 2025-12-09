@@ -6,8 +6,9 @@ pub mod data;
 
 use clap::Parser;
 use cpd::{
-    candidate_generation::AlgoCandidateGeneration, config::CPDConfig,
-    graph_matching::AlgoGraphMatching,
+    candidate_generation::AlgoCandidateGeneration,
+    config::CPDConfig,
+    graph_matching::{AlgoGraphMatching, GEDEditCosts},
 };
 
 /// Fast Rust implementation for Collaboration Pattern Discovery
@@ -23,16 +24,25 @@ struct Args {
     #[arg(short, long, default_value = "stdout")]
     output: String,
 
-    /// Min exact support
+    /// Exact support
     #[arg(long, default_value_t = 2)]
     support_exact: usize,
 
-    /// Min relaxed support
+    /// Relaxed support
     #[arg(long, default_value_t = 2)]
     support_relaxed: usize,
 
+    /// Graph matching:
+    /// - "cosine" (node and edge vector similarity, uses the alpha parameter),
+    /// - "ged" (approx. graph edit distance)
+    /// - "vf2" (only exact matches)
+    #[arg(long, default_value = "cosine")]
+    graph_matching: String,
+
     /// Relaxed threshold
-    #[arg(long, default_value_t = 0.8)]
+    /// - values [0.0..1.0] for graph matching "cosine" (1.0 means exact matches)
+    /// - values >= 0 for graph matching "ged" (0 means exact matches)
+    #[arg(long, default_value_t = 0.95)]
     relaxed_threshold: f64,
 
     /// Activity vertex type
@@ -51,7 +61,7 @@ struct Args {
     #[arg(long, default_value_t = 5)]
     max_vertices: usize,
 
-    /// The alpha value between 0.0 and 1.0 defines the weight importantance of the vertex and edge
+    /// The alpha value between 0.0 and 1.0 defines the weight importance of the vertex and edge
     /// vectors: if 1.0, the edges are ignored; if 0.0, the vertices are ignored
     #[arg(long, default_value_t = 0.5)]
     alpha: f64,
@@ -77,24 +87,53 @@ fn main() {
         );
         return;
     }
-    if args.alpha > 1.0 || args.alpha < 0.0 {
+    if args.graph_matching == "cosine" && (args.alpha > 1.0 || args.alpha < 0.0) {
         println!(
-            "Parameter error! Alpha should be 0.0 <= alpha <= 1.0, is {}",
+            "Parameter error! --alpha should be 0.0 <= alpha <= 1.0, is {}",
             args.alpha
+        );
+        return;
+    }
+    if args.graph_matching == "cosine"
+        && (args.relaxed_threshold > 1.0 || args.relaxed_threshold < 0.0)
+    {
+        println!(
+            "Parameter error! for cosine graph matchting, the --relaxed-threshold should be 0.0 <= relaxed_threshold <= 1.0, is {}",
+            args.relaxed_threshold
+        );
+        return;
+    }
+    if args.graph_matching == "ged" && args.relaxed_threshold < 0.0 {
+        println!(
+            "Parameter error! for ged graph matchting, the --relaxed-threshold should be >= 0, is {}",
+            args.relaxed_threshold
         );
         return;
     }
     let now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
-    match graphs {
+    let graphs = match graphs {
         Ok(ref graphs) => {
             if !silence {
                 println!("All good parsing input file, found {} graphs", graphs.len());
             }
+            graphs
         }
         Err(err) => panic!("{}", err.to_string()),
+    };
+    let mut graph_matching = AlgoGraphMatching::GEDFastHungarian {
+        edit_costs: GEDEditCosts::default(),
+        matching_threshold: args.relaxed_threshold.round() as usize,
+    };
+    if args.graph_matching == "cosine" {
+        graph_matching = AlgoGraphMatching::CosineSimilarity {
+            alpha: args.alpha,
+            matching_threshold: args.relaxed_threshold,
+        }
     }
-    let graphs = graphs.unwrap();
+    if args.graph_matching == "vf2" {
+        graph_matching = AlgoGraphMatching::VF2IsomorphismTest;
+    }
     let cpd_config = CPDConfig::new(
         AlgoCandidateGeneration::FullyConnected {
             activity_vertex_type: args.activity_vertex_type,
@@ -102,10 +141,7 @@ fn main() {
             min_number_of_activity_vertices: args.min_vertices,
             max_number_of_activity_vertices: args.max_vertices,
         },
-        AlgoGraphMatching::CosineSimilarity {
-            alpha: args.alpha,
-            matching_threshold: args.relaxed_threshold,
-        },
+        graph_matching,
         args.support_exact,
         args.support_relaxed,
         args.silence,
@@ -113,7 +149,7 @@ fn main() {
     if !silence {
         println!("Mining patterns..");
     };
-    let patterns = cpd_config.run(&graphs);
+    let patterns = cpd_config.run(graphs);
     let delta = now.elapsed().as_millis();
     if !silence {
         println!("Finished. Total time: {delta}ms");
