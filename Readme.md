@@ -37,7 +37,7 @@ Provide a plain text file with the graph database:
 
 
 #### Example
-see [graph.txt](./graphs.txt)
+see [graph.txt](./test_data/graphs.txt)
 In this example, the vertex type 1 is the "activity" and the vertex type 3 defines the context of the activity vertices.
 ```
 t # 0
