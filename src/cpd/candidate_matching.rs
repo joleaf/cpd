@@ -3,7 +3,10 @@ use std::{
     sync::Arc,
 };
 
-use super::graph_matching::{AlgoGraphMatching, MatchingResult};
+use super::{
+    candidate_generation::Candidate,
+    graph_matching::{AlgoGraphMatching, MatchingResult},
+};
 use crate::data::graph::Graph;
 use dashmap::DashMap;
 use rayon::prelude::*;
@@ -136,7 +139,7 @@ impl AlgoCandidateMatching {
     /// - After matching, pattern IDs are reassigned to ensure stable ordering in output.
     pub fn run_matching(
         &self,
-        candidates: &[Vec<Graph>],
+        candidates: &[Vec<Vec<Candidate>>],
         algo_graph_matching: &AlgoGraphMatching,
         support_exact: usize,
         support_relaxed: usize,
@@ -164,7 +167,7 @@ impl AlgoCandidateMatching {
 }
 
 fn run_naive(
-    candidates: &[Vec<Graph>],
+    candidates: &[Vec<Vec<Candidate>>],
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
@@ -174,64 +177,69 @@ fn run_naive(
     let mut match_results: HashMap<(usize, usize), MatchingResult> = HashMap::new();
     let mut matches: Vec<usize> = Vec::new();
     for (i_a, candidates_of_graph_a) in candidates.iter().enumerate() {
-        for candidate_a in candidates_of_graph_a.iter() {
-            if can_be_skipped.contains(&candidate_a.id) {
-                continue;
-            }
-            let mut freq_exact = 1;
-            let mut freq_relaxed = 1;
-            matches.clear();
-            matches.push(candidate_a.id);
-            for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
-                // Do not compare the graphs of the same graph
-                if i_a == i_b {
+        for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
+            for candidate_a in candidate_n_a.iter() {
+                if can_be_skipped.contains(&candidate_a.graph.id) {
                     continue;
                 }
-                let mut exact_match_id: Option<usize> = None;
-                let mut found_relaxed_match = false;
-                for candidate_b in candidates_of_graph_b.iter() {
-                    let key = if candidate_a.id < candidate_b.id {
-                        (candidate_a.id, candidate_b.id)
-                    } else {
-                        (candidate_b.id, candidate_a.id)
-                    };
-                    let match_result = match_results.entry(key).or_insert_with(|| {
-                        algo_graph_matching.match_graphs(candidate_a, candidate_b)
-                    });
-                    match match_result {
-                        MatchingResult::ExactMatch => {
-                            exact_match_id = Some(candidate_b.id);
-                            break; // We do not need search for other relaxed or exact matches
-                        }
-                        MatchingResult::RelaxedMatch => found_relaxed_match = true,
-                        MatchingResult::NoMatch => {
-                            // Nothing
+                let mut freq_exact = 1;
+                let mut freq_relaxed = 1;
+                matches.clear();
+                matches.push(candidate_a.graph.id);
+                for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
+                    // Do not compare the graphs of the same graph
+                    if i_a == i_b {
+                        continue;
+                    }
+                    // Only compare graphs of the same n size :)
+                    let candidates_of_graph_b: &Vec<Candidate> =
+                        candidates_of_graph_b.get(i_n_a).unwrap();
+                    let mut exact_match_id: Option<usize> = None;
+                    let mut found_relaxed_match = false;
+                    for candidate_b in candidates_of_graph_b.iter() {
+                        let key = if candidate_a.graph.id < candidate_b.graph.id {
+                            (candidate_a.graph.id, candidate_b.graph.id)
+                        } else {
+                            (candidate_b.graph.id, candidate_a.graph.id)
+                        };
+                        let match_result = match_results.entry(key).or_insert_with(|| {
+                            algo_graph_matching.match_graphs(&candidate_a.graph, &candidate_b.graph)
+                        });
+                        match match_result {
+                            MatchingResult::ExactMatch => {
+                                exact_match_id = Some(candidate_b.graph.id);
+                                break; // We do not need search for other relaxed or exact matches
+                            }
+                            MatchingResult::RelaxedMatch => found_relaxed_match = true,
+                            MatchingResult::NoMatch => {
+                                // Nothing
+                            }
                         }
                     }
+                    if let Some(t_id) = exact_match_id {
+                        freq_exact += 1;
+                        freq_relaxed += 1;
+                        matches.push(t_id);
+                    } else if found_relaxed_match {
+                        freq_relaxed += 1;
+                    }
                 }
-                if let Some(t_id) = exact_match_id {
-                    freq_exact += 1;
-                    freq_relaxed += 1;
-                    matches.push(t_id);
-                } else if found_relaxed_match {
-                    freq_relaxed += 1;
+                if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
+                    resulting_candidates.push(PatternResult {
+                        pattern: candidate_a.graph.clone(),
+                        frequency_exact: freq_exact,
+                        frequency_relaxed: freq_relaxed,
+                    });
                 }
+                can_be_skipped.extend(&matches);
             }
-            if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
-                resulting_candidates.push(PatternResult {
-                    pattern: (*candidate_a).clone(),
-                    frequency_exact: freq_exact,
-                    frequency_relaxed: freq_relaxed,
-                });
-            }
-            can_be_skipped.extend(&matches);
         }
     }
     resulting_candidates
 }
 
 fn run_parallel(
-    candidates: &[Vec<Graph>],
+    candidates: &[Vec<Vec<Candidate>>],
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
@@ -246,55 +254,61 @@ fn run_parallel(
         .flat_map(|(i_a, candidates_of_graph_a)| {
             let mut local = Vec::with_capacity(candidates_of_graph_a.len() / 4);
 
-            for candidate_a in candidates_of_graph_a.iter() {
-                let mut freq_exact = 1;
-                let mut freq_relaxed = 1;
+            for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
+                for candidate_a in candidate_n_a.iter() {
+                    let mut freq_exact = 1;
+                    let mut freq_relaxed = 1;
 
-                // Check all other groups
-                for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
-                    if i_a == i_b {
-                        continue;
-                    }
+                    // Check all other groups
+                    for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
+                        if i_a == i_b {
+                            continue;
+                        }
+                        // Only compare graphs of the same n size :)
+                        let candidates_of_graph_b: &Vec<Candidate> =
+                            candidates_of_graph_b.get(i_n_a).unwrap();
 
-                    let mut exact_match_found = false;
-                    let mut relaxed_found = false;
+                        let mut exact_match_found = false;
+                        let mut relaxed_found = false;
 
-                    for candidate_b in candidates_of_graph_b.iter() {
-                        let (a, b) = if candidate_a.id < candidate_b.id {
-                            (candidate_a.id, candidate_b.id)
-                        } else {
-                            (candidate_b.id, candidate_a.id)
-                        };
+                        for candidate_b in candidates_of_graph_b.iter() {
+                            let (a, b) = if candidate_a.graph.id < candidate_b.graph.id {
+                                (candidate_a.graph.id, candidate_b.graph.id)
+                            } else {
+                                (candidate_b.graph.id, candidate_a.graph.id)
+                            };
 
-                        let result = *match_cache.entry((a, b)).or_insert_with(|| {
-                            algo_graph_matching.match_graphs(candidate_a, candidate_b)
-                        });
+                            let result = *match_cache.entry((a, b)).or_insert_with(|| {
+                                algo_graph_matching
+                                    .match_graphs(&candidate_a.graph, &candidate_b.graph)
+                            });
 
-                        match result {
-                            MatchingResult::ExactMatch => exact_match_found = true,
-                            MatchingResult::RelaxedMatch => {
-                                relaxed_found = true;
+                            match result {
+                                MatchingResult::ExactMatch => exact_match_found = true,
+                                MatchingResult::RelaxedMatch => {
+                                    relaxed_found = true;
+                                }
+                                MatchingResult::NoMatch => {
+                                    // Nothing
+                                }
                             }
-                            MatchingResult::NoMatch => {
-                                // Nothing
-                            }
+                        }
+
+                        if exact_match_found {
+                            freq_exact += 1;
+                            freq_relaxed += 1;
+                        } else if relaxed_found {
+                            freq_relaxed += 1;
                         }
                     }
 
-                    if exact_match_found {
-                        freq_exact += 1;
-                        freq_relaxed += 1;
-                    } else if relaxed_found {
-                        freq_relaxed += 1;
+                    if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
+                        local.push(PatternResult {
+                            pattern: candidate_a.graph.clone(),
+                            frequency_exact: freq_exact,
+                            frequency_relaxed: freq_relaxed,
+                        });
                     }
-                }
-
-                if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
-                    local.push(PatternResult {
-                        pattern: candidate_a.clone(),
-                        frequency_exact: freq_exact,
-                        frequency_relaxed: freq_relaxed,
-                    });
                 }
             }
 

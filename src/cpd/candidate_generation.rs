@@ -19,6 +19,14 @@ impl GraphIdGenerator {
         *data
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Candidate {
+    pub n_activity: usize,
+    pub id_parent: usize,
+    pub graph: Graph,
+}
+
 #[derive(Debug)]
 /// Enum representing different strategies for generating candidate subgraphs from a set of input graphs.
 ///
@@ -76,7 +84,7 @@ impl AlgoCandidateGeneration {
     /// let candidates = algo.get_candidates(&graphs);
     /// assert_eq!(candidates.len(), graphs.len()); // one Vec<Graph> per input graph
     /// ```
-    pub fn get_candidates(&self, graphs: &Vec<Graph>) -> Vec<Vec<Graph>> {
+    pub fn get_candidates(&self, graphs: &Vec<Graph>) -> Vec<Vec<Vec<Candidate>>> {
         let graph_id_generator = Arc::new(GraphIdGenerator::new());
         match self {
             AlgoCandidateGeneration::FullyConnected {
@@ -103,7 +111,7 @@ fn get_fully_connected_candidates(
     min_number_of_activity_vertices: &usize,
     max_number_of_activity_vertices: &usize,
     graph_id_generator: Arc<GraphIdGenerator>,
-) -> Vec<Vec<Graph>> {
+) -> Vec<Vec<Vec<Candidate>>> {
     graphs
         .par_iter() // Parallel processing
         // .iter()
@@ -127,14 +135,16 @@ fn _get_fully_connected_candidates_of_graph(
     min_number_of_activity_vertices: &usize,
     max_number_of_activity_vertices: &usize,
     graph_id_generator: Arc<GraphIdGenerator>,
-) -> Vec<Graph> {
+) -> Vec<Vec<Candidate>> {
     let activity_vertices = graph.get_vertices_by_type(*activity_vertex_type);
-    let mut candidates = Vec::new();
+    let mut candidates =
+        Vec::with_capacity(max_number_of_activity_vertices - min_number_of_activity_vertices + 1);
 
     // Get candidates for the requested number of activity vertices
     for number_of_activity_vertices in
         *min_number_of_activity_vertices..(max_number_of_activity_vertices + 1)
     {
+        let mut candidates_with_n = Vec::new();
         for comb in activity_vertices
             .iter()
             .combinations(number_of_activity_vertices)
@@ -184,9 +194,14 @@ fn _get_fully_connected_candidates_of_graph(
                         }
                     }
                 }
-                candidates.push(new_candidate);
+                candidates_with_n.push(Candidate {
+                    n_activity: number_of_activity_vertices,
+                    id_parent: graph.id,
+                    graph: new_candidate,
+                })
             }
         }
+        candidates.push(candidates_with_n);
     }
     candidates
 }
@@ -232,7 +247,7 @@ mod tests {
         let result = algo.get_candidates(&vec![g]);
 
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].len(), 2);
+        assert_eq!(result[0][0].len(), 2);
     }
 
     #[test]
@@ -252,7 +267,7 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g]);
         assert_eq!(
-            result[0].len(),
+            result[0][0].len(),
             0,
             "Disconnected activities should not produce candidates"
         );
@@ -270,10 +285,11 @@ mod tests {
         };
 
         let result = algo.get_candidates(&vec![g]);
-        let candidates = &result[0];
+        let candidates = &result[0][0];
 
         let candidate: &Graph = candidates
             .iter()
+            .map(|c| &c.graph)
             .find(|c| c.vertices.iter().any(|v| v.label == 2))
             .unwrap();
 
@@ -296,7 +312,7 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g]);
 
-        assert_eq!(result[0].len(), 1);
+        assert_eq!(result[0][0].len(), 1);
     }
 
     #[test]
@@ -314,8 +330,8 @@ mod tests {
         let result = algo.get_candidates(&vec![g1, g2]);
 
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].len(), 2);
-        assert_eq!(result[1].len(), 2);
+        assert_eq!(result[0][0].len(), 2);
+        assert_eq!(result[1][0].len(), 2);
     }
 
     #[test]
@@ -331,7 +347,7 @@ mod tests {
 
         let result = algo.get_candidates(&vec![g]);
 
-        let ids: Vec<_> = result[0].iter().map(|c| c.id).collect();
+        let ids: Vec<_> = result[0][0].iter().map(|c| c.graph.id).collect();
         let mut sorted = ids.clone();
         sorted.sort();
 
