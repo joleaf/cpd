@@ -81,14 +81,14 @@ fn main() {
         println!("-----------------------");
     }
     if args.min_vertices > args.max_vertices {
-        println!(
+        eprintln!(
             "Parameter error! Min number of activity vertices ({}) > Max number of activity vertices ({})!",
             args.min_vertices, args.max_vertices
         );
         return;
     }
     if args.graph_matching == "cosine" && (args.alpha > 1.0 || args.alpha < 0.0) {
-        println!(
+        eprintln!(
             "Parameter error! --alpha should be 0.0 <= alpha <= 1.0, is {}",
             args.alpha
         );
@@ -97,14 +97,14 @@ fn main() {
     if args.graph_matching == "cosine"
         && (args.relaxed_threshold > 1.0 || args.relaxed_threshold < 0.0)
     {
-        println!(
+        eprintln!(
             "Parameter error! for cosine graph matchting, the --relaxed-threshold should be 0.0 <= relaxed_threshold <= 1.0, is {}",
             args.relaxed_threshold
         );
         return;
     }
     if args.graph_matching == "ged" && args.relaxed_threshold < 0.0 {
-        println!(
+        eprintln!(
             "Parameter error! for ged graph matchting, the --relaxed-threshold should be >= 0, is {}",
             args.relaxed_threshold
         );
@@ -119,7 +119,10 @@ fn main() {
             }
             graphs
         }
-        Err(err) => panic!("{}", err.to_string()),
+        Err(err) => {
+            eprintln!("Error parsing input file: {}", err);
+            return;
+        }
     };
     let mut graph_matching = AlgoGraphMatching::GEDFastHungarian {
         edit_costs: GEDEditCosts::default(),
@@ -167,7 +170,12 @@ fn main() {
         use std::fs::File;
         use std::io::Write;
 
-        let mut file = File::create(&args.output).expect("Failed to create output file");
+        let file = File::create(&args.output);
+        if file.is_err() {
+            eprintln!("Failed to create output file");
+            return;
+        }
+        let mut file = file.unwrap();
 
         for g in patterns.iter() {
             let line = format!(
