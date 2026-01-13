@@ -16,6 +16,8 @@ Furthermore, based on the defined vertex_types, the algorithm identifies context
 cargo install cpd
 ```
 
+Or download the binary from the [latest release](https://github.com/joleaf/cpd/releases/latest).
+
 ### Input graph database
 
 Provide a plain text file with the graph database:
