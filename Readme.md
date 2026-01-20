@@ -25,7 +25,7 @@ Provide a plain text file with the graph database:
 - t-line: Begin of a new graph
     - Format `t # i` 
         - `i` (int) index of the graph
-        - (The result file contains 2 additional values: `* {exact_frequence} / {relaxed_frequency}` )
+        - (The result file contains 2 additional values: `* {exact_frequency} / {relaxed_frequency}` )
 - v-line: Definition of a vertex
     - Format `v i l t` 
         - `i` (int): index of the vertex inside the graph
