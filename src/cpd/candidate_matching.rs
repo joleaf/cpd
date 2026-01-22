@@ -9,6 +9,7 @@ use super::{
 };
 use crate::data::graph::Graph;
 use dashmap::DashMap;
+use itertools::Itertools;
 use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -143,6 +144,7 @@ impl AlgoCandidateMatching {
         algo_graph_matching: &AlgoGraphMatching,
         support_exact: usize,
         support_relaxed: usize,
+        compare_only_same_size: bool,
     ) -> Vec<PatternResult> {
         let mut result = match self {
             AlgoCandidateMatching::Naive => run_naive(
@@ -150,12 +152,14 @@ impl AlgoCandidateMatching {
                 algo_graph_matching,
                 support_exact,
                 support_relaxed,
+                compare_only_same_size,
             ),
             AlgoCandidateMatching::Parallel => run_parallel(
                 candidates,
                 algo_graph_matching,
                 support_exact,
                 support_relaxed,
+                compare_only_same_size,
             ),
         };
         // Update ids of graphs
@@ -171,6 +175,7 @@ fn run_naive(
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
+    compare_only_same_size: bool,
 ) -> Vec<PatternResult> {
     let mut resulting_candidates = Vec::new();
     let mut can_be_skipped: HashSet<usize> = HashSet::new();
@@ -192,8 +197,15 @@ fn run_naive(
                         continue;
                     }
                     // Only compare graphs of the same n size :)
-                    let candidates_of_graph_b: &Vec<Candidate> =
-                        candidates_of_graph_b.get(i_n_a).unwrap();
+                    let candidates_of_graph_b: Vec<&Candidate> = if compare_only_same_size {
+                        candidates_of_graph_b
+                            .get(i_n_a)
+                            .unwrap()
+                            .iter()
+                            .collect_vec()
+                    } else {
+                        candidates_of_graph_b.iter().flatten().collect()
+                    };
                     let mut exact_match_id: Option<usize> = None;
                     let mut found_relaxed_match = false;
                     for candidate_b in candidates_of_graph_b.iter() {
@@ -243,6 +255,7 @@ fn run_parallel(
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
+    compare_only_same_size: bool,
 ) -> Vec<PatternResult> {
     // Symmetric match result cache
     let match_cache = Arc::new(DashMap::<(usize, usize), MatchingResult>::new());
@@ -265,8 +278,15 @@ fn run_parallel(
                             continue;
                         }
                         // Only compare graphs of the same n size :)
-                        let candidates_of_graph_b: &Vec<Candidate> =
-                            candidates_of_graph_b.get(i_n_a).unwrap();
+                        let candidates_of_graph_b: Vec<&Candidate> = if compare_only_same_size {
+                            candidates_of_graph_b
+                                .get(i_n_a)
+                                .unwrap()
+                                .iter()
+                                .collect_vec()
+                        } else {
+                            candidates_of_graph_b.iter().flatten().collect()
+                        };
 
                         let mut exact_match_found = false;
                         let mut relaxed_found = false;

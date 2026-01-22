@@ -66,7 +66,12 @@ struct Args {
     #[arg(long, default_value_t = 0.5)]
     alpha: f64,
 
-    /// Supress debug statements
+    /// Compare only candidates with the same size of activity nodes, if false, the candidates with
+    /// different activity node sizes will be compared and this may result in more relaxed matches.
+    #[arg(long, default_value_t = false)]
+    compare_only_same_size: bool,
+
+    /// Suppress debug statements
     #[arg(long, default_value_t = false)]
     silence: bool,
 }
@@ -148,6 +153,7 @@ fn main() {
         args.support_exact,
         args.support_relaxed,
         args.silence,
+        args.compare_only_same_size,
     );
     if !silence {
         println!("Mining patterns..");
