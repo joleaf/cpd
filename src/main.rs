@@ -66,8 +66,9 @@ struct Args {
     #[arg(long, default_value_t = 0.5)]
     alpha: f64,
 
-    /// Compare only candidates with the same size of activity nodes, if false, the candidates with
-    /// different activity node sizes will be compared and this may result in more relaxed matches.
+    /// If true, only candidates with the same size of activity nodes are compared.
+    /// If false, the candidates with different activity node sizes will be compared and  
+    /// this may result in more relaxed matches.
     #[arg(long, default_value_t = false)]
     compare_only_same_size: bool,
 

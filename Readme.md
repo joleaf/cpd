@@ -157,6 +157,8 @@ cpd --help
            Maximum number of the main vertices [default: 5]
        --alpha <ALPHA>
            The alpha value between 0.0 and 1.0 defines the weight importance of the vertex and edge vecto rs: if 1.0, the edges are ignored; if 0.0, the vertices are ignored [default: 0.5]
+       --compare-only-same-size
+           If true, only candidates with the same size of activity nodes are compared. If false, the candidates with different activity node sizes will be compared and this may result in more relaxed matches.
        --silence
            Supress debug statements
    -h, --help
