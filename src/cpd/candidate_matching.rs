@@ -9,7 +9,6 @@ use super::{
 };
 use crate::data::graph::Graph;
 use dashmap::DashMap;
-use itertools::Itertools;
 use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
@@ -197,18 +196,16 @@ fn run_naive(
                         continue;
                     }
                     // Only compare graphs of the same n size :)
-                    let candidates_of_graph_b: Vec<&Candidate> = if compare_only_same_size {
-                        candidates_of_graph_b
-                            .get(i_n_a)
-                            .unwrap()
-                            .iter()
-                            .collect_vec()
-                    } else {
-                        candidates_of_graph_b.iter().flatten().collect()
-                    };
+                    let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
+                        if compare_only_same_size {
+                            Box::new(candidates_of_graph_b[i_n_a].iter())
+                        } else {
+                            Box::new(candidates_of_graph_b.iter().flatten())
+                        };
+
                     let mut exact_match_id: Option<usize> = None;
                     let mut found_relaxed_match = false;
-                    for candidate_b in candidates_of_graph_b.iter() {
+                    for candidate_b in candidates_of_graph_b {
                         let key = if candidate_a.graph.id < candidate_b.graph.id {
                             (candidate_a.graph.id, candidate_b.graph.id)
                         } else {
@@ -278,20 +275,17 @@ fn run_parallel(
                             continue;
                         }
                         // Only compare graphs of the same n size :)
-                        let candidates_of_graph_b: Vec<&Candidate> = if compare_only_same_size {
-                            candidates_of_graph_b
-                                .get(i_n_a)
-                                .unwrap()
-                                .iter()
-                                .collect_vec()
-                        } else {
-                            candidates_of_graph_b.iter().flatten().collect()
-                        };
+                        let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
+                            if compare_only_same_size {
+                                Box::new(candidates_of_graph_b[i_n_a].iter())
+                            } else {
+                                Box::new(candidates_of_graph_b.iter().flatten())
+                            };
 
                         let mut exact_match_found = false;
                         let mut relaxed_found = false;
 
-                        for candidate_b in candidates_of_graph_b.iter() {
+                        for candidate_b in candidates_of_graph_b {
                             let (a, b) = if candidate_a.graph.id < candidate_b.graph.id {
                                 (candidate_a.graph.id, candidate_b.graph.id)
                             } else {
