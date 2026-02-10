@@ -89,8 +89,9 @@ command = [
       "--graph-matching", "cosine",
       "--relaxed-threshold", "0.95",
       "--min-vertices", "4",
-      "--max-vertices", "4",
-      "--alpha", "0.5"
+      "--max-vertices", "5",
+      "--alpha", "0.5",
+      "--compare-only-same-size"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true

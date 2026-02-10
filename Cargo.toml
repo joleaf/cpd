@@ -4,11 +4,11 @@ version = "0.2.2"
 edition = "2024"
 authors = ["Jonas Blatt <jonblatt1992@gmail.com>"]
 license = "MIT"
-description = "A tool to search for context-aware and relaxed frequent subgraphs in a graph database"
+description = "Collaboration Pattern Detection: A tool to search for context-aware and relaxed frequent subgraphs in a graph database"
 readme = "Readme.md"
 repository = "https://github.com/joleaf/cpd"
 homepage = "https://github.com/joleaf/cpd"
-keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph']
+keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph', 'pattern']
 categories = ["algorithms", "command-line-utilities"]
 exclude = [
     "test_data/*",

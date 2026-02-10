@@ -4,9 +4,9 @@
 
 # CPD
 
-**Collaboration Pattern Discovery (CPD)** is a subgraph mining algorithm that searches for patterns in a graph database.
+**Collaboration Pattern Detection (CPD)** is a subgraph mining algorithm that searches for patterns in a graph database.
 The algorithm does not only look for exact matches; it can also explore a relaxed search space.
-Furthermore, based on the defined vertex_types, the algorithm identifies context-aware patterns.
+Furthermore, based on the defined vertex_types, the algorithm identifies and ensures context-aware patterns.
 
 ## Usage
 
@@ -122,7 +122,7 @@ cpd \
 ```
 The parameter `--activity-vertex-type` specifies which vertex type is treated as an activity node; CPD will only generate pattern candidates where these activity vertices form a fully connected subgraph.
 The parameter `--object-vertex-types` defines which vertex types represent context nodes, meaning they provide additional structural or semantic information that surrounds the activity pattern.
-Together, these settings ensure that discovered patterns always contain a cohesive activity core enriched with contextual object information.
+Together, these settings ensure that detected patterns always contain a cohesive activity core enriched with contextual object information.
 
 Get help:
 ```shell

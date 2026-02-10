@@ -11,7 +11,7 @@ use cpd::{
     graph_matching::{AlgoGraphMatching, GEDEditCosts},
 };
 
-/// Fast Rust implementation for Collaboration Pattern Discovery
+/// Fast Rust implementation for Collaboration Pattern Detection
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -82,9 +82,9 @@ fn main() {
     let silence = args.silence;
 
     if !silence {
-        println!("-----------------------");
-        println!("| CPD Subgraph Mining |");
-        println!("-----------------------");
+        println!("-----------------------------------");
+        println!("| Collaboration Pattern Detection |");
+        println!("-----------------------------------");
     }
     if args.min_vertices > args.max_vertices {
         eprintln!(
