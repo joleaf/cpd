@@ -8,7 +8,7 @@ description = "Collaboration Pattern Detection: A tool to search for context-awa
 readme = "Readme.md"
 repository = "https://github.com/joleaf/cpd"
 homepage = "https://github.com/joleaf/cpd"
-keywords = ["cli", "collaboration", "graph", "frequent", 'subgraph', 'pattern']
+keywords = ["collaboration", "graph", "frequent", 'subgraph', 'pattern']
 categories = ["algorithms", "command-line-utilities"]
 exclude = [
     "test_data/*",
