@@ -125,213 +125,208 @@ impl Graph {
         let mut graph_id = 0;
         let mut current_graph: Graph = Graph::new(usize::MAX);
         let line_reader = read_lines(path);
-        match line_reader {
-            Ok(lines) => {
-                for data_line in lines.map_while(Result::ok) {
-                    let mut data = data_line.split(" ");
-                    if let Some(data_type) = data.next() {
-                        match data_type {
-                            "t" => {
-                                let _ = data.next().ok_or(GraphSetParseError {
-                                    message: "Missing '#' in graph".to_string(),
-                                })?;
-                                let id = data.next().ok_or(GraphSetParseError {
-                                    message: "Id for graph is missing".to_string(),
-                                })?;
-                                if id == "-1" {
-                                    break;
-                                }
-                                if current_graph.id != usize::MAX {
-                                    graph_list.push(current_graph);
-                                }
-                                let id = id.parse::<usize>();
-                                match id {
-                                    Ok(id) => {
-                                        current_graph = Graph::new(id);
-                                        if id != graph_id {
-                                            return Err(GraphSetParseError {
-                                                message: format!(
-                                                    "Graph with graph id {}, it should have the id {}",
-                                                    id, graph_id
-                                                ),
-                                            });
-                                        }
-                                        graph_id += 1;
-                                    }
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: "Id for graph invalid".to_string(),
-                                        });
-                                    }
-                                }
-                            }
-                            "v" => {
-                                let id = data.next().ok_or(GraphSetParseError {
-                                    message: format!(
-                                        "Graph {}, Missing id for a vertex in",
-                                        current_graph.id
-                                    )
-                                    .to_string(),
-                                })?;
-                                let id = id.parse::<usize>();
-                                match id {
-                                    Ok(id) => {
-                                        let vertex = current_graph.create_vertex();
-                                        if vertex.id != id {
-                                            return Err(GraphSetParseError {
-                                                message: format!(
-                                                    "Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}",
-                                                    current_graph.id.clone(),
-                                                    id,
-                                                    current_graph.get_last_vertex().id
-                                                ),
-                                            });
-                                        }
-                                        let label = data.next().ok_or(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Missing label for a vertex",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        })?;
-                                        let label = label.parse::<usize>();
-                                        if label.is_err() {
-                                            return Err(GraphSetParseError {
-                                                message: format!(
-                                                    "Graph {}, Vertex {}, Label invalid",
-                                                    current_graph.id, id
-                                                ),
-                                            });
-                                        }
-                                        current_graph.get_last_vertex().label = label.unwrap();
-                                        let vertex_type =
-                                            data.next().ok_or(GraphSetParseError {
-                                                message: format!(
-                                                    "Graph {}, Missing vertex type for a vertex",
-                                                    current_graph.id
-                                                )
-                                                .to_string(),
-                                            })?;
-                                        let vertex_type = vertex_type.parse::<usize>();
-                                        if vertex_type.is_err() {
-                                            return Err(GraphSetParseError {
-                                                message: format!(
-                                                    "Graph {}, Vertex {}, Vertex type is invalid",
-                                                    current_graph.id, id
-                                                ),
-                                            });
-                                        }
-                                        current_graph.get_last_vertex().vertex_type =
-                                            vertex_type.unwrap();
-                                    }
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Vertex ID invalid",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        });
-                                    }
-                                }
-                            }
-                            "e" => {
-                                let from_id = data.next().ok_or(GraphSetParseError {
-                                    message: format!(
-                                        "Graph {}, Missing from id for an edge",
-                                        current_graph.id
-                                    )
-                                    .to_string(),
-                                })?;
-                                let from_id: usize = match from_id.parse() {
-                                    Ok(value) => value,
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Invalid from id for an edge",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        });
-                                    }
-                                };
-                                let to_id = data.next().ok_or(GraphSetParseError {
-                                    message: format!(
-                                        "Graph {}, Missing to id for a edge in",
-                                        current_graph.id
-                                    )
-                                    .to_string(),
-                                })?;
-                                let to_id: usize = match to_id.parse() {
-                                    Ok(value) => value,
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Invalid to id for a edge",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        });
-                                    }
-                                };
-                                let e_label = data.next().ok_or(GraphSetParseError {
-                                    message: format!(
-                                        "Graph {}, Missing edge label for a edge",
-                                        current_graph.id
-                                    )
-                                    .to_string(),
-                                })?;
-                                let e_label: usize = match e_label.parse() {
-                                    Ok(value) => value,
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Invalid e_label for a edge",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        });
-                                    }
-                                };
-
-                                if !current_graph.has_vertex_with_id(&from_id)
-                                    || !current_graph.has_vertex_with_id(&to_id)
-                                {
+        if line_reader.is_err() {
+            return Err(GraphSetParseError {
+                message: "Error reading file".to_string(),
+            });
+        }
+        let lines = line_reader.unwrap();
+        for data_line in lines.map_while(Result::ok) {
+            let mut data = data_line.split(" ");
+            if let Some(data_type) = data.next() {
+                match data_type {
+                    "t" => {
+                        let _ = data.next().ok_or(GraphSetParseError {
+                            message: "Missing '#' in graph".to_string(),
+                        })?;
+                        let id = data.next().ok_or(GraphSetParseError {
+                            message: "Id for graph is missing".to_string(),
+                        })?;
+                        if id == "-1" {
+                            break;
+                        }
+                        if current_graph.id != usize::MAX {
+                            graph_list.push(current_graph);
+                        }
+                        let id = id.parse::<usize>();
+                        match id {
+                            Ok(id) => {
+                                current_graph = Graph::new(id);
+                                if id != graph_id {
                                     return Err(GraphSetParseError {
                                         message: format!(
-                                            "Graph {}, Edge invalid, ids of vertices not found",
-                                            current_graph.id
-                                        )
-                                        .to_string(),
+                                            "Graph with graph id {}, it should have the id {}",
+                                            id, graph_id
+                                        ),
                                     });
                                 }
-
-                                let from_vertex: Option<&mut Vertex> =
-                                    current_graph.vertices.get_mut(from_id);
-                                match from_vertex {
-                                    Some(from_vertex) => {
-                                        from_vertex.push(to_id, e_label);
-                                    }
-                                    _ => {
-                                        return Err(GraphSetParseError {
-                                            message: format!(
-                                                "Graph {}, Edge invalid, ids of vertices not found",
-                                                current_graph.id
-                                            )
-                                            .to_string(),
-                                        });
-                                    }
-                                }
+                                graph_id += 1;
                             }
-                            _ => {}
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: "Id for graph invalid".to_string(),
+                                });
+                            }
                         }
                     }
+                    "v" => {
+                        let id = data.next().ok_or(GraphSetParseError {
+                            message: format!(
+                                "Graph {}, Missing id for a vertex in",
+                                current_graph.id
+                            )
+                            .to_string(),
+                        })?;
+                        let id = id.parse::<usize>();
+                        match id {
+                            Ok(id) => {
+                                let vertex = current_graph.create_vertex();
+                                if vertex.id != id {
+                                    return Err(GraphSetParseError {
+                                        message: format!(
+                                            "Graph {}, Vertex ID ({}) in input file does not fit the expected ID {}",
+                                            current_graph.id.clone(),
+                                            id,
+                                            current_graph.get_last_vertex().id
+                                        ),
+                                    });
+                                }
+                                let label = data.next().ok_or(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Missing label for a vertex",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                })?;
+                                let label = label.parse::<usize>();
+                                if label.is_err() {
+                                    return Err(GraphSetParseError {
+                                        message: format!(
+                                            "Graph {}, Vertex {}, Label invalid",
+                                            current_graph.id, id
+                                        ),
+                                    });
+                                }
+                                current_graph.get_last_vertex().label = label.unwrap();
+                                let vertex_type = data.next().ok_or(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Missing vertex type for a vertex",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                })?;
+                                let vertex_type = vertex_type.parse::<usize>();
+                                if vertex_type.is_err() {
+                                    return Err(GraphSetParseError {
+                                        message: format!(
+                                            "Graph {}, Vertex {}, Vertex type is invalid",
+                                            current_graph.id, id
+                                        ),
+                                    });
+                                }
+                                current_graph.get_last_vertex().vertex_type = vertex_type.unwrap();
+                            }
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Vertex ID invalid",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                });
+                            }
+                        }
+                    }
+                    "e" => {
+                        let from_id = data.next().ok_or(GraphSetParseError {
+                            message: format!(
+                                "Graph {}, Missing from id for an edge",
+                                current_graph.id
+                            )
+                            .to_string(),
+                        })?;
+                        let from_id: usize = match from_id.parse() {
+                            Ok(value) => value,
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Invalid from id for an edge",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                });
+                            }
+                        };
+                        let to_id = data.next().ok_or(GraphSetParseError {
+                            message: format!(
+                                "Graph {}, Missing to id for a edge in",
+                                current_graph.id
+                            )
+                            .to_string(),
+                        })?;
+                        let to_id: usize = match to_id.parse() {
+                            Ok(value) => value,
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Invalid to id for a edge",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                });
+                            }
+                        };
+                        let e_label = data.next().ok_or(GraphSetParseError {
+                            message: format!(
+                                "Graph {}, Missing edge label for a edge",
+                                current_graph.id
+                            )
+                            .to_string(),
+                        })?;
+                        let e_label: usize = match e_label.parse() {
+                            Ok(value) => value,
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Invalid e_label for a edge",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                });
+                            }
+                        };
+
+                        if !current_graph.has_vertex_with_id(&from_id)
+                            || !current_graph.has_vertex_with_id(&to_id)
+                        {
+                            return Err(GraphSetParseError {
+                                message: format!(
+                                    "Graph {}, Edge invalid, ids of vertices not found",
+                                    current_graph.id
+                                )
+                                .to_string(),
+                            });
+                        }
+
+                        let from_vertex: Option<&mut Vertex> =
+                            current_graph.vertices.get_mut(from_id);
+                        match from_vertex {
+                            Some(from_vertex) => {
+                                from_vertex.push(to_id, e_label);
+                            }
+                            _ => {
+                                return Err(GraphSetParseError {
+                                    message: format!(
+                                        "Graph {}, Edge invalid, ids of vertices not found",
+                                        current_graph.id
+                                    )
+                                    .to_string(),
+                                });
+                            }
+                        }
+                    }
+                    _ => {}
                 }
-            }
-            Err(_) => {
-                return Err(GraphSetParseError {
-                    message: "Error reading file".to_string(),
-                });
             }
         }
         if current_graph.id != usize::MAX {
