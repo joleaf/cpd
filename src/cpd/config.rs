@@ -142,7 +142,7 @@ impl CPDConfig {
                 self.algo_candidate_matching
             );
             println!(" - Exact support        : {:?}", self.support_exact);
-            println!(" - Releaxed support     : {:?}", self.support_relaxed);
+            println!(" - Relaxed support      : {:?}", self.support_relaxed);
             println!(" - Graph matching       : {:?}", self.algo_graph_matching);
         }
 
