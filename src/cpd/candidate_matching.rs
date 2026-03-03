@@ -244,7 +244,37 @@ fn run_naive(
             }
         }
     }
-    resulting_candidates
+    // Remove duplicates
+    let mut unique = Vec::with_capacity(resulting_candidates.len());
+    let mut visited = HashSet::<usize>::new();
+
+    for (i_one_graph, one_graph) in resulting_candidates.iter().enumerate() {
+        if visited.contains(&one_graph.pattern.id) {
+            continue;
+        }
+        visited.insert(one_graph.pattern.id);
+
+        for i_other_graph in (i_one_graph + 1)..resulting_candidates.len() {
+            let other_graph = resulting_candidates.get(i_other_graph).unwrap();
+            if one_graph.pattern.id == other_graph.pattern.id {
+                continue;
+            }
+
+            let key = if one_graph.pattern.id < other_graph.pattern.id {
+                (one_graph.pattern.id, other_graph.pattern.id)
+            } else {
+                (other_graph.pattern.id, one_graph.pattern.id)
+            };
+
+            if let Some(result) = match_results.get(&key)
+                && *result == MatchingResult::ExactMatch
+            {
+                visited.insert(other_graph.pattern.id);
+            }
+        }
+        unique.push(one_graph.clone());
+    }
+    unique
 }
 
 fn run_parallel(
