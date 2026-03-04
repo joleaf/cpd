@@ -197,7 +197,6 @@ fn run_naive(
                             Box::new(candidates_of_graph_b.iter().flatten())
                         };
 
-                    let mut found_relaxed_match = false;
                     for candidate_b in candidates_of_graph_b {
                         let key = if candidate_a.graph.id < candidate_b.graph.id {
                             (candidate_a.graph.id, candidate_b.graph.id)
@@ -210,16 +209,13 @@ fn run_naive(
                         match match_result {
                             MatchingResult::ExactMatch => {
                                 matches.push(candidate_b.graph.id);
-                                found_relaxed_match = true;
+                                freq_relaxed += 1;
                             }
-                            MatchingResult::RelaxedMatch => found_relaxed_match = true,
+                            MatchingResult::RelaxedMatch => freq_relaxed += 1,
                             MatchingResult::NoMatch => {
                                 // Nothing
                             }
                         }
-                    }
-                    if found_relaxed_match {
-                        freq_relaxed += 1;
                     }
                 }
                 let freq_exact = matches.len();
@@ -268,8 +264,6 @@ fn run_parallel(
                                 Box::new(candidates_of_graph_b.iter().flatten())
                             };
 
-                        let mut relaxed_found = false;
-
                         for candidate_b in candidates_of_graph_b {
                             let (a, b) = if candidate_a.graph.id < candidate_b.graph.id {
                                 (candidate_a.graph.id, candidate_b.graph.id)
@@ -284,20 +278,16 @@ fn run_parallel(
 
                             match result {
                                 MatchingResult::ExactMatch => {
-                                    relaxed_found = true;
+                                    freq_relaxed += 1;
                                     freq_exact += 1;
                                 }
                                 MatchingResult::RelaxedMatch => {
-                                    relaxed_found = true;
+                                    freq_relaxed += 1;
                                 }
                                 MatchingResult::NoMatch => {
                                     // Nothing
                                 }
                             }
-                        }
-
-                        if relaxed_found {
-                            freq_relaxed += 1;
                         }
                     }
                     if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
