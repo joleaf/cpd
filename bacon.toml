@@ -81,17 +81,17 @@ on_success = "back" # so that we don't open the browser at each change
 [jobs.run]
 command = [
     "cargo", "run", "--release", "--", 
-      "--input", "test_data/graphs.txt", 
+      "--input", "test_data/graphs_big.txt", 
       "--activity-vertex-type", "3",
       "--object-vertex-types", "1", 
-      "--support-exact", "2", 
-      "--support-relaxed", "4", 
+      "--support-exact", "20", 
+      "--support-relaxed", "50", 
       "--graph-matching", "cosine",
-      "--relaxed-threshold", "0.95",
+      "--relaxed-threshold", "0.98",
       "--min-vertices", "4",
-      "--max-vertices", "5",
+      "--max-vertices", "4",
       "--alpha", "0.5",
-      "--compare-only-same-size"
+  # "--compare-only-same-size"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true
