@@ -180,21 +180,15 @@ fn run_naive(
     let mut can_be_skipped: HashSet<usize> = HashSet::new();
     let mut match_results: HashMap<(usize, usize), MatchingResult> = HashMap::new();
     let mut matches: Vec<usize> = Vec::new();
-    for (i_a, candidates_of_graph_a) in candidates.iter().enumerate() {
+    for candidates_of_graph_a in candidates.iter() {
         for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
             for candidate_a in candidate_n_a.iter() {
                 if can_be_skipped.contains(&candidate_a.graph.id) {
                     continue;
                 }
-                let mut freq_exact = 1;
-                let mut freq_relaxed = 1;
+                let mut freq_relaxed = 0;
                 matches.clear();
-                matches.push(candidate_a.graph.id);
-                for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
-                    // Do not compare the graphs of the same graph
-                    if i_a == i_b {
-                        continue;
-                    }
+                for candidates_of_graph_b in candidates.iter() {
                     // Only compare graphs of the same n size :)
                     let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
                         if compare_only_same_size {
@@ -203,7 +197,6 @@ fn run_naive(
                             Box::new(candidates_of_graph_b.iter().flatten())
                         };
 
-                    let mut exact_match_id: Option<usize> = None;
                     let mut found_relaxed_match = false;
                     for candidate_b in candidates_of_graph_b {
                         let key = if candidate_a.graph.id < candidate_b.graph.id {
@@ -216,8 +209,8 @@ fn run_naive(
                         });
                         match match_result {
                             MatchingResult::ExactMatch => {
-                                exact_match_id = Some(candidate_b.graph.id);
-                                break; // We do not need search for other relaxed or exact matches
+                                matches.push(candidate_b.graph.id);
+                                found_relaxed_match = true;
                             }
                             MatchingResult::RelaxedMatch => found_relaxed_match = true,
                             MatchingResult::NoMatch => {
@@ -225,14 +218,11 @@ fn run_naive(
                             }
                         }
                     }
-                    if let Some(t_id) = exact_match_id {
-                        freq_exact += 1;
-                        freq_relaxed += 1;
-                        matches.push(t_id);
-                    } else if found_relaxed_match {
+                    if found_relaxed_match {
                         freq_relaxed += 1;
                     }
                 }
+                let freq_exact = matches.len();
                 if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
                     resulting_candidates.push(PatternResult {
                         pattern: candidate_a.graph.clone(),
@@ -244,37 +234,7 @@ fn run_naive(
             }
         }
     }
-    // Remove duplicates
-    let mut unique = Vec::with_capacity(resulting_candidates.len());
-    let mut visited = HashSet::<usize>::new();
-
-    for (i_one_graph, one_graph) in resulting_candidates.iter().enumerate() {
-        if visited.contains(&one_graph.pattern.id) {
-            continue;
-        }
-        visited.insert(one_graph.pattern.id);
-
-        for i_other_graph in (i_one_graph + 1)..resulting_candidates.len() {
-            let other_graph = resulting_candidates.get(i_other_graph).unwrap();
-            if one_graph.pattern.id == other_graph.pattern.id {
-                continue;
-            }
-
-            let key = if one_graph.pattern.id < other_graph.pattern.id {
-                (one_graph.pattern.id, other_graph.pattern.id)
-            } else {
-                (other_graph.pattern.id, one_graph.pattern.id)
-            };
-
-            if let Some(result) = match_results.get(&key)
-                && *result == MatchingResult::ExactMatch
-            {
-                visited.insert(other_graph.pattern.id);
-            }
-        }
-        unique.push(one_graph.clone());
-    }
-    unique
+    resulting_candidates
 }
 
 fn run_parallel(
@@ -290,20 +250,16 @@ fn run_parallel(
     // Parallel map over all groups
     let all_results: Vec<PatternResult> = candidates
         .par_iter()
-        .enumerate()
-        .flat_map(|(i_a, candidates_of_graph_a)| {
+        .flat_map(|candidates_of_graph_a| {
             let mut local = Vec::with_capacity(candidates_of_graph_a.len() / 4);
 
             for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
                 for candidate_a in candidate_n_a.iter() {
-                    let mut freq_exact = 1;
-                    let mut freq_relaxed = 1;
+                    let mut freq_relaxed = 0;
+                    let mut freq_exact = 0;
 
                     // Check all other groups
-                    for (i_b, candidates_of_graph_b) in candidates.iter().enumerate() {
-                        if i_a == i_b {
-                            continue;
-                        }
+                    for candidates_of_graph_b in candidates.iter() {
                         // Only compare graphs of the same n size :)
                         let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
                             if compare_only_same_size {
@@ -312,7 +268,6 @@ fn run_parallel(
                                 Box::new(candidates_of_graph_b.iter().flatten())
                             };
 
-                        let mut exact_match_found = false;
                         let mut relaxed_found = false;
 
                         for candidate_b in candidates_of_graph_b {
@@ -328,7 +283,10 @@ fn run_parallel(
                             });
 
                             match result {
-                                MatchingResult::ExactMatch => exact_match_found = true,
+                                MatchingResult::ExactMatch => {
+                                    relaxed_found = true;
+                                    freq_exact += 1;
+                                }
                                 MatchingResult::RelaxedMatch => {
                                     relaxed_found = true;
                                 }
@@ -338,14 +296,10 @@ fn run_parallel(
                             }
                         }
 
-                        if exact_match_found {
-                            freq_exact += 1;
-                            freq_relaxed += 1;
-                        } else if relaxed_found {
+                        if relaxed_found {
                             freq_relaxed += 1;
                         }
                     }
-
                     if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
                         local.push(PatternResult {
                             pattern: candidate_a.graph.clone(),
