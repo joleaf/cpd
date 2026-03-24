@@ -9,7 +9,13 @@ use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use std::{fmt, io};
 
-use super::utils::{get_edge_vector, get_vertex_vector};
+use super::utils::{build_edge_vector, build_vertex_vector};
+
+/// (Vetex Label, Vertex Type)
+pub type VertexVectorKey = (usize, usize);
+
+/// (From Vertex Label, From Vertex Type, Edge Label, To Vertex Label, To Vertex Type)
+pub type EdgeVectorKey = (usize, usize, usize, usize, usize);
 
 #[derive(Debug)]
 pub struct GraphSetParseError {
@@ -26,8 +32,8 @@ impl fmt::Display for GraphSetParseError {
 pub struct Graph {
     pub id: usize,
     pub vertices: Vec<Vertex>,
-    vertex_vector: OnceLock<Arc<HashMap<(usize, usize), usize>>>,
-    edge_vector: OnceLock<Arc<HashMap<(usize, usize, usize, usize, usize), usize>>>,
+    vertex_vector: OnceLock<Arc<HashMap<VertexVectorKey, usize>>>,
+    edge_vector: OnceLock<Arc<HashMap<EdgeVectorKey, usize>>>,
     digraph: OnceLock<Arc<DiGraph<(usize, usize), usize>>>,
 }
 
@@ -73,16 +79,16 @@ impl Graph {
     pub fn get_vertex_vector(&self) -> Arc<HashMap<(usize, usize), usize>> {
         self.vertex_vector
             .get_or_init(|| {
-                let map = get_vertex_vector(self);
+                let map = build_vertex_vector(self);
                 Arc::new(map)
             })
             .clone()
     }
 
-    pub fn get_edge_vector(&self) -> Arc<HashMap<(usize, usize, usize, usize, usize), usize>> {
+    pub fn get_edge_vector(&self) -> Arc<HashMap<EdgeVectorKey, usize>> {
         self.edge_vector
             .get_or_init(|| {
-                let map = get_edge_vector(self);
+                let map = build_edge_vector(self);
                 Arc::new(map)
             })
             .clone()

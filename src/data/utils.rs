@@ -2,8 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use crate::data::edge::Edge;
 
-use super::{graph::Graph, vertex::Vertex};
+use super::{graph::EdgeVectorKey, graph::Graph, graph::VertexVectorKey, vertex::Vertex};
 
+/// Check if the vertices of a graph are connected through edges
 pub fn vertices_are_connected(vertices: &Vec<&Vertex>) -> bool {
     let v_ids: HashSet<usize> = vertices.iter().map(|v| v.id).collect();
     let mut edges: Vec<&Edge> = vertices
@@ -32,9 +33,8 @@ pub fn vertices_are_connected(vertices: &Vec<&Vertex>) -> bool {
     v_ids.len() == visited_v.len()
 }
 
-// Maybe implement caching for the two functions: https://stackoverflow.com/questions/36230889/what-is-the-idiomatic-way-to-implement-caching-on-a-function-that-is-not-a-struc
-
-pub fn get_vertex_vector(graph: &Graph) -> HashMap<(usize, usize), usize> {
+/// Build the vertex vector of a graph -> Number of unique (label, vertex_type) tuples
+pub fn build_vertex_vector(graph: &Graph) -> HashMap<VertexVectorKey, usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
         *result.entry((v.label, v.vertex_type)).or_insert(0) += 1;
@@ -42,7 +42,9 @@ pub fn get_vertex_vector(graph: &Graph) -> HashMap<(usize, usize), usize> {
     result
 }
 
-pub fn get_edge_vector(graph: &Graph) -> HashMap<(usize, usize, usize, usize, usize), usize> {
+/// Build the edge vector of a graph -> Number of unique (From vetrex label, from vertex type, edge
+/// label, to vertex label, to vertex types) tuples
+pub fn build_edge_vector(graph: &Graph) -> HashMap<EdgeVectorKey, usize> {
     let mut result = HashMap::new();
     graph.vertices.iter().for_each(|v| {
         v.edges.iter().for_each(|e| {
@@ -102,7 +104,7 @@ mod tests {
         graph.vertices.get_mut(1).unwrap().push(2, 0);
         graph.vertices.get_mut(1).unwrap().push(3, 0);
         graph.vertices.get_mut(3).unwrap().push(2, 0);
-        let vertex_vector = get_vertex_vector(&graph);
+        let vertex_vector = build_vertex_vector(&graph);
         assert_eq!(vertex_vector.len(), 3);
         assert_eq!(vertex_vector[&(1, 2)], 1);
         assert_eq!(vertex_vector[&(2, 2)], 2);
@@ -121,7 +123,7 @@ mod tests {
         graph.vertices.get_mut(1).unwrap().push(2, 3);
         graph.vertices.get_mut(1).unwrap().push(3, 4);
         graph.vertices.get_mut(3).unwrap().push(3, 4);
-        let edge_vector = get_edge_vector(&graph);
+        let edge_vector = build_edge_vector(&graph);
         assert_eq!(edge_vector.len(), 4);
         assert_eq!(edge_vector[&(1, 2, 1, 2, 2)], 1);
         assert_eq!(edge_vector[&(1, 2, 2, 3, 4)], 1);
