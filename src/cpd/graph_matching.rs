@@ -24,6 +24,21 @@ pub enum AlgoGraphMatching {
     /// - `matching_threshold`: minimum similarity for `RelaxedMatch`
     CosineSimilarity { alpha: f64, matching_threshold: f64 },
 
+    /// Computes similarity based on the cosine similarity of vertex- and edge-frequency
+    /// vectors extracted from both graphs.
+    ///
+    /// # Parameters
+    /// - `alpha`: weight of vertex similarity vs. edge similarity (0–1)
+    /// - `matching_threshold_min`: minimum similarity threshold for `RelaxedMatch`, minimum value for the threshold
+    /// - `matching_threshold_max`: minimum similarity threshold for `RelaxedMatch`, maximum value for the threshold
+    /// - `k`: Growing factor
+    CosineSimilarityDynThreshold {
+        alpha: f64,
+        matching_threshold_min: f64,
+        matching_threshold_max: f64,
+        k: f64,
+    },
+
     /// Determines exact graph isomorphism using the VF2 algorithm.
     /// Returns either `ExactMatch` or `NoMatch`.
     VF2IsomorphismTest,
@@ -58,6 +73,12 @@ impl AlgoGraphMatching {
             AlgoGraphMatching::CosineSimilarity {
                 alpha,
                 matching_threshold: _,
+            } => graph_cosine_similarity(one_graph, other_graph, *alpha),
+            AlgoGraphMatching::CosineSimilarityDynThreshold {
+                alpha,
+                matching_threshold_min: _,
+                matching_threshold_max: _,
+                k: _,
             } => graph_cosine_similarity(one_graph, other_graph, *alpha),
             AlgoGraphMatching::VF2IsomorphismTest => graph_vf2_isomorphism(one_graph, other_graph),
             AlgoGraphMatching::GEDFastHungarian {
@@ -124,6 +145,33 @@ impl AlgoGraphMatching {
                         MatchingResult::RelaxedMatch
                     }
                 } else if distance >= *matching_threshold {
+                    MatchingResult::RelaxedMatch
+                } else {
+                    MatchingResult::NoMatch
+                }
+            }
+            AlgoGraphMatching::CosineSimilarityDynThreshold {
+                alpha: _,
+                matching_threshold_min,
+                matching_threshold_max,
+                k,
+            } => {
+                const EPS: f64 = 1e-8;
+                // 1. Calculate N as the maximum node count of the two graphs
+                let n = std::cmp::max(one_graph.get_size(), other_graph.get_size()) as f64;
+                // 2. Compute the size-dependent dynamic threshold
+                let matching_threshold = matching_threshold_min
+                    + (matching_threshold_max - matching_threshold_min) * (1.0 - (-k * n).exp());
+
+                if distance >= 1.0 - EPS {
+                    if AlgoGraphMatching::VF2IsomorphismTest.match_graphs(one_graph, other_graph)
+                        == MatchingResult::ExactMatch
+                    {
+                        MatchingResult::ExactMatch
+                    } else {
+                        MatchingResult::RelaxedMatch
+                    }
+                } else if distance >= matching_threshold {
                     MatchingResult::RelaxedMatch
                 } else {
                     MatchingResult::NoMatch

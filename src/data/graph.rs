@@ -101,6 +101,10 @@ impl Graph {
             .clone()
     }
 
+    pub fn get_size(&self) -> usize {
+        self.vertices.len() + self.vertices.iter().map(|v| v.edges.len()).sum::<usize>()
+    }
+
     fn build_digraph(&self) -> DiGraph<(usize, usize), usize> {
         let mut g = DiGraph::new();
 
@@ -384,12 +388,19 @@ mod tests {
     #[test]
     fn test_simple_graph() {
         let mut graph = Graph::new(1);
+        assert_eq!(graph.get_size(), 0);
         graph.create_vertex_with_data(1, 2);
+        assert_eq!(graph.get_size(), 1);
         graph.create_vertex_with_data(2, 2);
+        assert_eq!(graph.get_size(), 2);
         graph.create_vertex_with_data(3, 4);
+        assert_eq!(graph.get_size(), 3);
         graph.vertices.get_mut(0).unwrap().push(1, 0);
+        assert_eq!(graph.get_size(), 4);
         graph.vertices.get_mut(0).unwrap().push(2, 0);
+        assert_eq!(graph.get_size(), 5);
         graph.vertices.get_mut(1).unwrap().push(2, 0);
+        assert_eq!(graph.get_size(), 6);
         println!("{:?}", graph);
         assert_eq!(graph.vertices.len(), 3);
         assert_eq!(graph.vertices.first().unwrap().edges.len(), 2);
