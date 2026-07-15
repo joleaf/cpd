@@ -19,7 +19,7 @@ struct Args {
     #[arg(short, long)]
     input: String,
 
-    /// Output file for the resulting subgraphs, if "sdtout", the resulting patterns will be printed to the
+    /// Output file for the resulting subgraphs, if "stdout", the resulting patterns will be printed to the
     /// console after processing finished with ######
     #[arg(short, long, default_value = "stdout")]
     output: String,
@@ -34,6 +34,7 @@ struct Args {
 
     /// Graph matching:
     /// - "cosine" (node and edge vector similarity, uses the alpha parameter),
+    /// - "cosine-dyn" (dynamic threshold based on graph size),
     /// - "ged" (approx. graph edit distance)
     /// - "vf2" (only exact matches)
     #[arg(long, default_value = "cosine")]
@@ -45,7 +46,20 @@ struct Args {
     #[arg(long, default_value_t = 0.95)]
     relaxed_threshold: f64,
 
+    /// Dynamic threshold minimum (for "cosine-dyn")
+    #[arg(long, default_value_t = 0.6)]
+    threshold_min: f64,
+
+    /// Dynamic threshold maximum (for "cosine-dyn")
+    #[arg(long, default_value_t = 0.9)]
+    threshold_max: f64,
+
+    /// Growing factor k (for "cosine-dyn")
+    #[arg(long, default_value_t = 0.1)]
+    k: f64,
+
     /// Activity vertex type
+
     #[arg(long, default_value_t = 0)]
     activity_vertex_type: usize,
 
@@ -100,22 +114,38 @@ fn main() {
         );
         return;
     }
+    if args.graph_matching == "cosine-dyn" && (args.alpha > 1.0 || args.alpha < 0.0) {
+        eprintln!(
+            "Parameter error! --alpha should be 0.0 <= alpha <= 1.0, is {}",
+            args.alpha
+        );
+        return;
+    }
     if args.graph_matching == "cosine"
         && (args.relaxed_threshold > 1.0 || args.relaxed_threshold < 0.0)
     {
         eprintln!(
-            "Parameter error! for cosine graph matchting, the --relaxed-threshold should be 0.0 <= relaxed_threshold <= 1.0, is {}",
+            "Parameter error! for cosine graph matching, the --relaxed-threshold should be 0.0 <= relaxed_threshold <= 1.0, is {}",
             args.relaxed_threshold
+        );
+        return;
+    }
+    if args.graph_matching == "cosine-dyn"
+        && (args.threshold_min < 0.0 || args.threshold_max < 0.0 || args.threshold_min > args.threshold_max)
+    {
+        eprintln!(
+            "Parameter error! for cosine-dyn graph matching, thresholds should be >= 0 and --threshold-min <= --threshold-max"
         );
         return;
     }
     if args.graph_matching == "ged" && args.relaxed_threshold < 0.0 {
         eprintln!(
-            "Parameter error! for ged graph matchting, the --relaxed-threshold should be >= 0, is {}",
+            "Parameter error! for ged graph matching, the --relaxed-threshold should be >= 0, is {}",
             args.relaxed_threshold
         );
         return;
     }
+
     let now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
     let graphs = match graphs {
@@ -139,10 +169,17 @@ fn main() {
             alpha: args.alpha,
             matching_threshold: args.relaxed_threshold,
         }
-    }
-    if args.graph_matching == "vf2" {
+    } else if args.graph_matching == "cosine-dyn" {
+        graph_matching = AlgoGraphMatching::CosineSimilarityDynThreshold {
+            alpha: args.alpha,
+            matching_threshold_min: args.threshold_min,
+            matching_threshold_max: args.threshold_max,
+            k: args.k,
+        };
+    } else if args.graph_matching == "vf2" {
         graph_matching = AlgoGraphMatching::VF2IsomorphismTest;
     }
+
     let cpd_config = CPDConfig::new(
         AlgoCandidateGeneration::FullyConnected {
             activity_vertex_type: args.activity_vertex_type,

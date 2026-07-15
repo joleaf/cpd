@@ -130,6 +130,7 @@ impl AlgoGraphMatching {
     /// ```
     pub fn match_graphs(&self, one_graph: &Graph, other_graph: &Graph) -> MatchingResult {
         let distance = self.calc_distance(one_graph, other_graph);
+        println!("{}", distance);
         match self {
             AlgoGraphMatching::CosineSimilarity {
                 alpha: _,
@@ -448,6 +449,73 @@ mod tests {
                 matching_threshold: 0.5
             }
             .match_graphs(&one_graph, &other_graph),
+            MatchingResult::RelaxedMatch
+        );
+    }
+
+    #[test]
+    fn test_cosine_similarity_dyn_threshold() {
+        // Setup: alpha=0.5, min=0.6, max=0.9, k=0.1
+        let algo = AlgoGraphMatching::CosineSimilarityDynThreshold {
+            alpha: 0.5,
+            matching_threshold_min: 0.5,
+            matching_threshold_max: 0.9,
+            k: 0.1,
+        };
+
+        // 1. Exact Match: Structurally identical graphs
+        let mut g1 = Graph::new(1);
+        g1.create_vertex_with_data(1, 1);
+        g1.create_vertex_with_data(2, 1);
+        g1.vertices.get_mut(0).unwrap().push(1, 0);
+
+        let mut g2 = Graph::new(2);
+        g2.create_vertex_with_data(1, 1);
+        g2.create_vertex_with_data(2, 1);
+        g2.vertices.get_mut(0).unwrap().push(1, 0);
+
+        assert_eq!(algo.match_graphs(&g1, &g2), MatchingResult::ExactMatch);
+
+        // 2. Relaxed Match: Small graphs, similarity above the low threshold
+        // g3 has same core edge as g1, but an extra vertex.
+        // Vertex similarity will be high, Edge similarity = 1.0.
+        let mut g3 = Graph::new(3);
+        g3.create_vertex_with_data(1, 1);
+        g3.create_vertex_with_data(2, 1);
+        g3.create_vertex_with_data(3, 1);
+        g3.vertices.get_mut(0).unwrap().push(1, 0);
+        g3.vertices.get_mut(1).unwrap().push(2, 0);
+        g3.vertices.get_mut(2).unwrap().push(1, 0);
+
+        // n is small (3), so threshold is close to matching_threshold_m
+        assert_eq!(algo.match_graphs(&g1, &g3), MatchingResult::RelaxedMatch);
+
+        // 3. No Match: Small graphs, similarity below the threshold
+        let mut g4 = Graph::new(4);
+        g4.create_vertex_with_data(10, 1); // different labels
+        g4.create_vertex_with_data(20, 1);
+        g4.vertices.get_mut(0).unwrap().push(1, 0);
+
+        // Vertex similarity = 0, Edge similarity = 1.0. Total = 0.5.
+        assert_eq!(algo.match_graphs(&g1, &g4), MatchingResult::NoMatch);
+
+        // 4. Dynamic Threshold Effect:
+        // Two large graphs that are structurally similar
+        // but because they are large, the threshold is now closer to 1.
+        let mut g1_large = Graph::new(5);
+        g1_large.create_vertex_with_data(1, 1);
+        g1_large.vertices.get_mut(0).unwrap().push(1, 0);
+        for i in 2..20 {
+            g1_large.create_vertex_with_data(i, 1);
+        }
+        let mut g2_large = Graph::new(6);
+        g2_large.create_vertex_with_data(1, 1);
+        g2_large.vertices.get_mut(0).unwrap().push(1, 0);
+        for i in 2..21 {
+            g2_large.create_vertex_with_data(i, 1);
+        }
+        assert_eq!(
+            algo.match_graphs(&g1_large, &g2_large),
             MatchingResult::RelaxedMatch
         );
     }
