@@ -97,7 +97,6 @@ pub struct CPDConfig {
     support_exact: usize,
     support_relaxed: usize,
     silence: bool,
-    compare_only_same_size: bool,
 }
 
 impl CPDConfig {
@@ -107,7 +106,6 @@ impl CPDConfig {
         support_exact: usize,
         support_relaxed: usize,
         silence: bool,
-        compare_only_same_size: bool,
     ) -> Self {
         Self {
             algo_candidate_generation,
@@ -116,7 +114,6 @@ impl CPDConfig {
             support_exact,
             support_relaxed,
             silence,
-            compare_only_same_size,
         }
     }
 
@@ -152,7 +149,6 @@ impl CPDConfig {
             &self.algo_graph_matching,
             self.support_exact,
             self.support_relaxed,
-            self.compare_only_same_size,
         );
         let delta = now.elapsed().as_millis();
         if !self.silence {

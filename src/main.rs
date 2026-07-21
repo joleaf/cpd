@@ -80,12 +80,6 @@ struct Args {
     #[arg(long, default_value_t = 0.5)]
     alpha: f64,
 
-    /// If true, only candidates with the same size of activity nodes are compared.
-    /// If false, the candidates with different activity node sizes will be compared and  
-    /// this may result in more relaxed matches.
-    #[arg(long, default_value_t = false)]
-    compare_only_same_size: bool,
-
     /// Suppress debug statements
     #[arg(long, default_value_t = false)]
     silence: bool,
@@ -131,7 +125,9 @@ fn main() {
         return;
     }
     if args.graph_matching == "cosine-dyn"
-        && (args.threshold_min < 0.0 || args.threshold_max < 0.0 || args.threshold_min > args.threshold_max)
+        && (args.threshold_min < 0.0
+            || args.threshold_max < 0.0
+            || args.threshold_min > args.threshold_max)
     {
         eprintln!(
             "Parameter error! for cosine-dyn graph matching, thresholds should be >= 0 and --threshold-min <= --threshold-max"
@@ -191,7 +187,6 @@ fn main() {
         args.support_exact,
         args.support_relaxed,
         args.silence,
-        args.compare_only_same_size,
     );
     if !silence {
         println!("Mining patterns..");

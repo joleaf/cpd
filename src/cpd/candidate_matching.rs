@@ -1,6 +1,9 @@
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 
 use super::{
@@ -75,75 +78,12 @@ impl AlgoCandidateMatching {
     /// A flattened `Vec<PatternResult>` containing all subgraph patterns that reach the required
     /// frequency thresholds. The IDs of resulting pattern graphs are reassigned to ensure a
     /// consecutive sequence starting at zero.
-    ///
-    /// # Example
-    ///
-    /// The following example builds two simple graphs that share the same structure and then
-    /// runs exact/relaxed matching between their candidates:
-    ///
-    /// ```rust
-    /// use crate::candidate_matching::{AlgoCandidateMatching, PatternResult};
-    /// use crate::graph_matching::{AlgoGraphMatching, MatchingResult};
-    /// use crate::data::graph::Graph;
-    ///
-    /// // Build two small graphs with identical structure
-    /// fn make_graph(id: usize) -> Graph {
-    ///     let mut g = Graph::new(id);
-    ///     // Three activity vertices
-    ///     g.create_vertex_with_data(1, 2);
-    ///     g.create_vertex_with_data(2, 2);
-    ///     g.create_vertex_with_data(3, 2);
-    ///     // Fully connect them
-    ///     g.vertices.get_mut(0).unwrap().push(1, 0);
-    ///     g.vertices.get_mut(1).unwrap().push(2, 0);
-    ///     g.vertices.get_mut(2).unwrap().push(0, 0);
-    ///     g
-    /// }
-    ///
-    /// let g1 = make_graph(1);
-    /// let g2 = make_graph(2);
-    ///
-    /// // Each graph contributes its own set of candidates
-    /// // Here we pretend each graph itself is a single candidate
-    /// let candidates = vec![
-    ///     vec![g1.clone()],
-    ///     vec![g2.clone()],
-    /// ];
-    ///
-    /// // Matching algorithm based on vertex/edge cosine similarity
-    /// let matcher_algo = AlgoGraphMatching::CosineSimilarity {
-    ///     alpha: 0.5,
-    ///     matching_threshold: 0.8,
-    /// };
-    ///
-    /// // Use naive matching for simplicity
-    /// let matcher = AlgoCandidateMatching::Naive;
-    ///
-    /// let patterns: Vec<PatternResult> =
-    ///     matcher.run_matching(&candidates, &matcher_algo, 1, 1);
-    ///
-    /// assert_eq!(patterns.len(), 1);
-    /// assert_eq!(patterns[0].frequency_exact, 2);  // g1 matches g2 exactly
-    ///
-    /// println!(
-    ///     "Discovered pattern with new id {}, occurring {} exact times",
-    ///     patterns[0].pattern.id,
-    ///     patterns[0].frequency_exact
-    /// );
-    /// ```
-    ///
-    /// # Notes
-    ///
-    /// - The method performs candidate-to-candidate comparisons across **different** input graphs only.
-    /// - In parallel mode, a shared symmetric cache ensures each pair of graphs is matched at most once.
-    /// - After matching, pattern IDs are reassigned to ensure stable ordering in output.
     pub fn run_matching(
         &self,
         candidates: &[Vec<Vec<Candidate>>],
         algo_graph_matching: &AlgoGraphMatching,
         support_exact: usize,
         support_relaxed: usize,
-        compare_only_same_size: bool,
     ) -> Vec<PatternResult> {
         let mut result = match self {
             AlgoCandidateMatching::Naive => run_naive(
@@ -151,14 +91,12 @@ impl AlgoCandidateMatching {
                 algo_graph_matching,
                 support_exact,
                 support_relaxed,
-                compare_only_same_size,
             ),
             AlgoCandidateMatching::Parallel => run_parallel(
                 candidates,
                 algo_graph_matching,
                 support_exact,
                 support_relaxed,
-                compare_only_same_size,
             ),
         };
         // Update ids of graphs
@@ -174,63 +112,55 @@ fn run_naive(
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
-    compare_only_same_size: bool,
 ) -> Vec<PatternResult> {
-    let mut resulting_candidates = Vec::new();
-    let mut can_be_skipped: HashSet<usize> = HashSet::new();
+    let mut all_results = Vec::new();
     let mut match_results: HashMap<(usize, usize), MatchingResult> = HashMap::new();
-    let mut matches: Vec<usize> = Vec::new();
-    for candidates_of_graph_a in candidates.iter() {
-        for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
-            for candidate_a in candidate_n_a.iter() {
-                if can_be_skipped.contains(&candidate_a.graph.id) {
-                    continue;
-                }
-                let mut freq_relaxed = 0;
-                matches.clear();
-                for candidates_of_graph_b in candidates.iter() {
-                    // Only compare graphs of the same n size :)
-                    let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
-                        if compare_only_same_size {
-                            Box::new(candidates_of_graph_b[i_n_a].iter())
-                        } else {
-                            Box::new(candidates_of_graph_b.iter().flatten())
-                        };
 
-                    for candidate_b in candidates_of_graph_b {
+    for candidates_of_graph_a in candidates.iter() {
+        for candidate_n_a in candidates_of_graph_a.iter() {
+            for candidate_a in candidate_n_a.iter() {
+                let mut freq_relaxed = 0;
+                let mut freq_exact = 0;
+
+                for candidates_of_graph_b in candidates.iter() {
+                    let candidates_of_graph_b_iter: Box<
+                        dyn std::iter::Iterator<Item = &Candidate>,
+                    > = Box::new(candidates_of_graph_b.iter().flatten());
+
+                    for candidate_b in candidates_of_graph_b_iter {
                         let key = if candidate_a.graph.id < candidate_b.graph.id {
                             (candidate_a.graph.id, candidate_b.graph.id)
                         } else {
                             (candidate_b.graph.id, candidate_a.graph.id)
                         };
+
                         let match_result = match_results.entry(key).or_insert_with(|| {
                             algo_graph_matching.match_graphs(&candidate_a.graph, &candidate_b.graph)
                         });
-                        match match_result {
+
+                        match *match_result {
                             MatchingResult::ExactMatch => {
-                                matches.push(candidate_b.graph.id);
                                 freq_relaxed += 1;
+                                freq_exact += 1;
                             }
                             MatchingResult::RelaxedMatch => freq_relaxed += 1,
-                            MatchingResult::NoMatch => {
-                                // Nothing
-                            }
+                            MatchingResult::NoMatch => {}
                         }
                     }
                 }
-                let freq_exact = matches.len();
+
                 if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
-                    resulting_candidates.push(PatternResult {
+                    all_results.push(PatternResult {
                         pattern: candidate_a.graph.clone(),
                         frequency_exact: freq_exact,
                         frequency_relaxed: freq_relaxed,
                     });
                 }
-                can_be_skipped.extend(&matches);
             }
         }
     }
-    resulting_candidates
+
+    deduplicate_exact_matches(all_results, &match_results)
 }
 
 fn run_parallel(
@@ -238,71 +168,105 @@ fn run_parallel(
     algo_graph_matching: &AlgoGraphMatching,
     support_exact: usize,
     support_relaxed: usize,
-    compare_only_same_size: bool,
 ) -> Vec<PatternResult> {
-    // Symmetric match result cache
     let match_cache = Arc::new(DashMap::<(usize, usize), MatchingResult>::new());
 
-    // Parallel map over all groups
-    let all_results: Vec<PatternResult> = candidates
-        .par_iter()
-        .flat_map(|candidates_of_graph_a| {
-            let mut local = Vec::with_capacity(candidates_of_graph_a.len() / 4);
+    let mut flat_candidates = Vec::new();
+    let mut candidate_indices = Vec::new();
 
-            for (i_n_a, candidate_n_a) in candidates_of_graph_a.iter().enumerate() {
-                for candidate_a in candidate_n_a.iter() {
-                    let mut freq_relaxed = 0;
-                    let mut freq_exact = 0;
+    for graph_candidates in candidates {
+        let mut graph_indices = Vec::new();
+        for size_group in graph_candidates {
+            let mut size_indices = Vec::new();
+            for candidate in size_group {
+                size_indices.push(flat_candidates.len());
+                flat_candidates.push(candidate);
+            }
+            graph_indices.push(size_indices);
+        }
+        candidate_indices.push(graph_indices);
+    }
 
-                    // Check all other groups
-                    for candidates_of_graph_b in candidates.iter() {
-                        // Only compare graphs of the same n size :)
-                        let candidates_of_graph_b: Box<dyn Iterator<Item = &Candidate>> =
-                            if compare_only_same_size {
-                                Box::new(candidates_of_graph_b[i_n_a].iter())
-                            } else {
-                                Box::new(candidates_of_graph_b.iter().flatten())
-                            };
+    let total_candidates = flat_candidates.len();
+    let freq_exact = Arc::new(
+        (0..total_candidates)
+            .map(|_| AtomicUsize::new(0))
+            .collect::<Vec<_>>(),
+    );
+    let freq_relaxed = Arc::new(
+        (0..total_candidates)
+            .map(|_| AtomicUsize::new(0))
+            .collect::<Vec<_>>(),
+    );
 
-                        for candidate_b in candidates_of_graph_b {
-                            let (a, b) = if candidate_a.graph.id < candidate_b.graph.id {
-                                (candidate_a.graph.id, candidate_b.graph.id)
-                            } else {
-                                (candidate_b.graph.id, candidate_a.graph.id)
-                            };
+    let num_graphs = candidates.len();
+    (0..num_graphs).into_par_iter().for_each(|i| {
+        // 1. Match candidates within the same graph (Internal matches)
+        let graph_i_indices = &candidate_indices[i];
+        for size_i in graph_i_indices.iter() {
+            for (idx_a_pos, &idx_a) in size_i.iter().enumerate() {
+                for &idx_b in &size_i[idx_a_pos + 1..] {
+                    process_match(
+                        idx_a,
+                        idx_b,
+                        flat_candidates[idx_a],
+                        flat_candidates[idx_b],
+                        algo_graph_matching,
+                        &match_cache,
+                        &freq_exact,
+                        &freq_relaxed,
+                    );
+                }
+            }
+        }
 
-                            let result = *match_cache.entry((a, b)).or_insert_with(|| {
-                                algo_graph_matching
-                                    .match_graphs(&candidate_a.graph, &candidate_b.graph)
-                            });
-
-                            match result {
-                                MatchingResult::ExactMatch => {
-                                    freq_relaxed += 1;
-                                    freq_exact += 1;
-                                }
-                                MatchingResult::RelaxedMatch => {
-                                    freq_relaxed += 1;
-                                }
-                                MatchingResult::NoMatch => {
-                                    // Nothing
-                                }
-                            }
+        // 2. Match candidates between different graphs (Symmetric matches)
+        for graph_j_indices in candidate_indices.iter().take(num_graphs).skip(i + 1) {
+            for size_i in graph_i_indices {
+                for &idx_a in size_i {
+                    for size_j in graph_j_indices {
+                        for &idx_b in size_j {
+                            process_match(
+                                idx_a,
+                                idx_b,
+                                flat_candidates[idx_a],
+                                flat_candidates[idx_b],
+                                algo_graph_matching,
+                                &match_cache,
+                                &freq_exact,
+                                &freq_relaxed,
+                            );
                         }
-                    }
-                    if freq_exact >= support_exact || freq_relaxed >= support_relaxed {
-                        local.push(PatternResult {
-                            pattern: candidate_a.graph.clone(),
-                            frequency_exact: freq_exact,
-                            frequency_relaxed: freq_relaxed,
-                        });
                     }
                 }
             }
+        }
+    });
 
-            local
-        })
-        .collect();
+    let mut all_results = Vec::new();
+    for (idx, candidate) in flat_candidates.iter().enumerate() {
+        let f_exact = freq_exact[idx].load(Ordering::Relaxed) + 1;
+        let f_relaxed = freq_relaxed[idx].load(Ordering::Relaxed) + 1;
+
+        if f_exact >= support_exact || f_relaxed >= support_relaxed {
+            all_results.push(PatternResult {
+                pattern: candidate.graph.clone(),
+                frequency_exact: f_exact,
+                frequency_relaxed: f_relaxed,
+            });
+        }
+    }
+
+    // Use the cache to deduplicate
+    let cache_map: HashMap<(usize, usize), MatchingResult> =
+        match_cache.iter().map(|r| (*r.key(), *r.value())).collect();
+    deduplicate_exact_matches(all_results, &cache_map)
+}
+
+fn deduplicate_exact_matches(
+    all_results: Vec<PatternResult>,
+    match_cache: &HashMap<(usize, usize), MatchingResult>,
+) -> Vec<PatternResult> {
     let mut unique = Vec::with_capacity(all_results.len());
     let mut visited = HashSet::<usize>::new();
 
@@ -333,4 +297,111 @@ fn run_parallel(
         unique.push(one_graph.clone());
     }
     unique
+}
+
+fn process_match(
+    idx_a: usize,
+    idx_b: usize,
+    candidate_a: &Candidate,
+    candidate_b: &Candidate,
+    algo_graph_matching: &AlgoGraphMatching,
+    match_cache: &DashMap<(usize, usize), MatchingResult>,
+    freq_exact: &[AtomicUsize],
+    freq_relaxed: &[AtomicUsize],
+) {
+    let (id_a, id_b) = if candidate_a.graph.id < candidate_b.graph.id {
+        (candidate_a.graph.id, candidate_b.graph.id)
+    } else {
+        (candidate_b.graph.id, candidate_a.graph.id)
+    };
+
+    let result = if let Some(res) = match_cache.get(&(id_a, id_b)) {
+        *res
+    } else {
+        *match_cache.entry((id_a, id_b)).or_insert_with(|| {
+            algo_graph_matching.match_graphs(&candidate_a.graph, &candidate_b.graph)
+        })
+    };
+
+    match result {
+        MatchingResult::ExactMatch => {
+            freq_exact[idx_a].fetch_add(1, Ordering::Relaxed);
+            freq_exact[idx_b].fetch_add(1, Ordering::Relaxed);
+            freq_relaxed[idx_a].fetch_add(1, Ordering::Relaxed);
+            freq_relaxed[idx_b].fetch_add(1, Ordering::Relaxed);
+        }
+        MatchingResult::RelaxedMatch => {
+            freq_relaxed[idx_a].fetch_add(1, Ordering::Relaxed);
+            freq_relaxed[idx_b].fetch_add(1, Ordering::Relaxed);
+        }
+        MatchingResult::NoMatch => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cpd::graph_matching::AlgoGraphMatching;
+    use crate::data::graph::Graph;
+
+    fn make_graph(id: usize) -> Graph {
+        let mut g = Graph::new(id);
+        g.create_vertex_with_data(1, 2);
+        g.create_vertex_with_data(2, 2);
+        g.vertices.get_mut(0).unwrap().push(1, 10);
+        g
+    }
+
+    #[test]
+    fn test_parallel_vs_naive_matching() {
+        let g1 = make_graph(1);
+        let g2 = make_graph(2);
+        let g3 = make_graph(3);
+
+        let c1 = Candidate {
+            n_activity: 2,
+            id_parent: 1,
+            graph: g1.clone(),
+        };
+        let c2 = Candidate {
+            n_activity: 2,
+            id_parent: 2,
+            graph: g2.clone(),
+        };
+        let c3 = Candidate {
+            n_activity: 2,
+            id_parent: 3,
+            graph: g3.clone(),
+        };
+
+        let candidates = vec![vec![vec![c1]], vec![vec![c2]], vec![vec![c3]]];
+
+        let algo_matching = AlgoGraphMatching::VF2IsomorphismTest;
+        let support_exact = 2;
+        let support_relaxed = 2;
+
+        let naive_matcher = AlgoCandidateMatching::Naive;
+        let parallel_matcher = AlgoCandidateMatching::Parallel;
+
+        let res_naive =
+            naive_matcher.run_matching(&candidates, &algo_matching, support_exact, support_relaxed);
+        let res_parallel = parallel_matcher.run_matching(
+            &candidates,
+            &algo_matching,
+            support_exact,
+            support_relaxed,
+        );
+
+        assert_eq!(res_naive.len(), res_parallel.len());
+        for i in 0..res_naive.len() {
+            assert_eq!(
+                res_naive[i].frequency_exact,
+                res_parallel[i].frequency_exact
+            );
+            assert_eq!(
+                res_naive[i].frequency_relaxed,
+                res_parallel[i].frequency_relaxed
+            );
+        }
+    }
 }
