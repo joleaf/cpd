@@ -201,7 +201,7 @@ fn run_parallel(
 
     (0..total_candidates).into_par_iter().for_each(|i| {
         for j in i + 1..total_candidates {
-            process_match(
+            candidate_matching(
                 i,
                 j,
                 flat_candidates[i],
@@ -271,7 +271,7 @@ fn deduplicate_exact_matches(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn process_match(
+fn candidate_matching(
     idx_a: usize,
     idx_b: usize,
     candidate_a: &Candidate,
