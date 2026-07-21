@@ -199,47 +199,18 @@ fn run_parallel(
             .collect::<Vec<_>>(),
     );
 
-    let num_graphs = candidates.len();
-    (0..num_graphs).into_par_iter().for_each(|i| {
-        // 1. Match candidates within the same graph (Internal matches)
-        let graph_i_indices = &candidate_indices[i];
-        for size_i in graph_i_indices.iter() {
-            for (idx_a_pos, &idx_a) in size_i.iter().enumerate() {
-                for &idx_b in &size_i[idx_a_pos + 1..] {
-                    process_match(
-                        idx_a,
-                        idx_b,
-                        flat_candidates[idx_a],
-                        flat_candidates[idx_b],
-                        algo_graph_matching,
-                        &match_cache,
-                        &freq_exact,
-                        &freq_relaxed,
-                    );
-                }
-            }
-        }
-
-        // 2. Match candidates between different graphs (Symmetric matches)
-        for graph_j_indices in candidate_indices.iter().take(num_graphs).skip(i + 1) {
-            for size_i in graph_i_indices {
-                for &idx_a in size_i {
-                    for size_j in graph_j_indices {
-                        for &idx_b in size_j {
-                            process_match(
-                                idx_a,
-                                idx_b,
-                                flat_candidates[idx_a],
-                                flat_candidates[idx_b],
-                                algo_graph_matching,
-                                &match_cache,
-                                &freq_exact,
-                                &freq_relaxed,
-                            );
-                        }
-                    }
-                }
-            }
+    (0..total_candidates).into_par_iter().for_each(|i| {
+        for j in i + 1..total_candidates {
+            process_match(
+                i,
+                j,
+                flat_candidates[i],
+                flat_candidates[j],
+                algo_graph_matching,
+                &match_cache,
+                &freq_exact,
+                &freq_relaxed,
+            );
         }
     });
 
@@ -299,6 +270,7 @@ fn deduplicate_exact_matches(
     unique
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_match(
     idx_a: usize,
     idx_b: usize,
