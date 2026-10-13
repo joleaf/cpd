@@ -58,20 +58,29 @@ struct Args {
     #[arg(long, default_value_t = 0.1)]
     k: f64,
 
-    /// Activity vertex type
+    /// Ignore activity and object nodes.
+    /// If set to true, all possible fully connected candidates are created and the activity and
+    /// object nodes are ignored.
+    #[arg(long, default_value_t = false)]
+    ignore_vertex_type: bool,
 
+    /// Activity vertex type.
+    /// Parameter is ignored when ignore_vertex_type = True.
     #[arg(long, default_value_t = 0)]
     activity_vertex_type: usize,
 
     /// Object vertex types
+    /// Parameter is ignored when ignore_vertex_type = True.
     #[arg(long, num_args = 0..)]
     object_vertex_types: Vec<usize>,
 
-    /// Minimum number of main vertices
+    /// Minimum number of main vertices (number of activity vertices, or the total number of
+    /// vertices when ignore_vertex_type = True)
     #[arg(long, default_value_t = 4)]
     min_vertices: usize,
 
-    /// Maximum number of the main vertices
+    /// Maximum number of main vertices (number of activity vertices, or the total number of
+    /// vertices when ignore_vertex_type = True)
     #[arg(long, default_value_t = 5)]
     max_vertices: usize,
 
@@ -141,6 +150,20 @@ fn main() {
         );
         return;
     }
+    if !silence {
+        if args.ignore_vertex_type {
+            println!(
+                "Note: --ignore-vertex-type is set, so --activity-vertex-type and --object-vertex-types are ignored."
+            );
+            println!(
+                "      Here, --min-vertices / --max-vertices refer to the TOTAL number of vertices in a candidate."
+            );
+        } else {
+            println!(
+                "Note: --min-vertices / --max-vertices refer to the number of ACTIVITY vertices in a candidate."
+            );
+        }
+    }
 
     let now = Instant::now();
     let graphs = Graph::graphs_set_from_file(args.input);
@@ -176,13 +199,22 @@ fn main() {
         graph_matching = AlgoGraphMatching::VF2IsomorphismTest;
     }
 
-    let cpd_config = CPDConfig::new(
+    let candidate_generation = if args.ignore_vertex_type {
+        AlgoCandidateGeneration::FullyConnectedWithOutContext {
+            min_number_of_activity_vertices: args.min_vertices,
+            max_number_of_activity_vertices: args.max_vertices,
+        }
+    } else {
         AlgoCandidateGeneration::FullyConnected {
             activity_vertex_type: args.activity_vertex_type,
             object_vertex_types: args.object_vertex_types,
             min_number_of_activity_vertices: args.min_vertices,
             max_number_of_activity_vertices: args.max_vertices,
-        },
+        }
+    };
+
+    let cpd_config = CPDConfig::new(
+        candidate_generation,
         graph_matching,
         args.support_exact,
         args.support_relaxed,

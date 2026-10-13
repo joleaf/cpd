@@ -91,6 +91,11 @@ e 10 12 1
 
 ### Run cpd
 
+The parameter `--activity-vertex-type` specifies which vertex type is treated as an activity node; CPD will only generate pattern candidates where these activity vertices form a fully connected subgraph.
+
+The parameter `--object-vertex-types` defines which vertex types represent context nodes, meaning they provide additional structural or semantic information that surrounds the activity pattern.
+Together, these settings ensure that detected patterns always contain a cohesive activity core enriched with contextual object information.
+
 Example [graph database](./test_data/graphs.txt):
 
 ```shell
@@ -144,10 +149,29 @@ cpd \
     --output out_dyn.txt
 ```
 
-The parameter `--activity-vertex-type` specifies which vertex type is treated as an activity node; CPD will only generate pattern candidates where these activity vertices form a fully connected subgraph.
+Example ignoring vertex types — the `--ignore-vertex-type` flag turns off type-based candidate generation, so every fully connected group of vertices is considered and `--activity-vertex-type` / `--object-vertex-types` are not used:
 
-The parameter `--object-vertex-types` defines which vertex types represent context nodes, meaning they provide additional structural or semantic information that surrounds the activity pattern.
-Together, these settings ensure that detected patterns always contain a cohesive activity core enriched with contextual object information.
+```shell
+cpd \
+    --input test_data/graphs.txt \
+    --ignore-vertex-type \
+    --support-exact 2 \
+    --support-relaxed 5 \
+    --graph-matching cosine \
+    --relaxed-threshold 0.6 \
+    --min-vertices 3 \
+    --max-vertices 3 \
+    --alpha 0.5 \
+    --output out_nocontext.txt
+```
+
+By default, CPD treats the vertex types you specify as meaningful: it builds candidates around a typed activity core and attaches the context (object) nodes around it. When you set `--ignore-vertex-type`, vertex types are ignored entirely and CPD enumerates all fully connected vertex groups within the `--min-vertices` / `--max-vertices` range, so `--activity-vertex-type` and `--object-vertex-types` have no effect.
+
+> **Note — what `--min-vertices` / `--max-vertices` mean:** their meaning depends on `--ignore-vertex-type`.
+>
+> - **Without** the flag (default): they bound the number of **activity** vertices in a candidate (the context/object nodes attached around that core are not counted).
+> - **With** the flag: they bound the **total** number of vertices in a candidate, since vertex types are no longer distinguished.
+
 
 Get help:
 
@@ -179,14 +203,16 @@ Options:
           Dynamic threshold maximum (for "cosine-dyn") [default: 0.9]
       --k <K>
           Growing factor k (for "cosine-dyn") [default: 0.1]
+      --ignore-vertex-type
+          Ignore activity and object nodes. If set to true, all possible fully connected candidates are created and the activity and object nodes are ignored
       --activity-vertex-type <ACTIVITY_VERTEX_TYPE>
-          Activity vertex type [default: 0]
+          Activity vertex type. Parameter is ignored when ignore_vertex_type = True [default: 0]
       --object-vertex-types [<OBJECT_VERTEX_TYPES>...]
-          Object vertex types
+          Object vertex types Parameter is ignored when ignore_vertex_type = True
       --min-vertices <MIN_VERTICES>
-          Minimum number of main vertices [default: 4]
+          Minimum number of main vertices (number of activity vertices, or the total number of vertices when ignore_vertex_type = True) [default: 4]
       --max-vertices <MAX_VERTICES>
-          Maximum number of the main vertices [default: 5]
+          Maximum number of main vertices (number of activity vertices, or the total number of vertices when ignore_vertex_type = True) [default: 5]
       --alpha <ALPHA>
           The alpha value between 0.0 and 1.0 defines the weight importance of the vertex and edge vectors: if 1.0, the edges are ignored; if 0.0, the vertices are ignored [default: 0.5]
       --silence

@@ -59,6 +59,10 @@ pub enum AlgoCandidateGeneration {
         min_number_of_activity_vertices: usize,
         max_number_of_activity_vertices: usize,
     },
+    FullyConnectedWithOutContext {
+        min_number_of_activity_vertices: usize,
+        max_number_of_activity_vertices: usize,
+    },
 }
 
 impl AlgoCandidateGeneration {
@@ -96,6 +100,15 @@ impl AlgoCandidateGeneration {
                 graphs,
                 activity_vertex_type,
                 object_vertex_types,
+                min_number_of_activity_vertices,
+                max_number_of_activity_vertices,
+                graph_id_generator,
+            ),
+            AlgoCandidateGeneration::FullyConnectedWithOutContext {
+                min_number_of_activity_vertices,
+                max_number_of_activity_vertices,
+            } => get_fully_connected_candidates_without_context(
+                graphs,
                 min_number_of_activity_vertices,
                 max_number_of_activity_vertices,
                 graph_id_generator,
@@ -206,6 +219,78 @@ fn _get_fully_connected_candidates_of_graph(
     candidates
 }
 
+fn get_fully_connected_candidates_without_context(
+    graphs: &Vec<Graph>,
+    min_number_of_activity_vertices: &usize,
+    max_number_of_activity_vertices: &usize,
+    graph_id_generator: Arc<GraphIdGenerator>,
+) -> Vec<Vec<Vec<Candidate>>> {
+    graphs
+        .par_iter() // Parallel processing
+        // .iter()
+        .map(|g| {
+            _get_fully_connected_candidates_of_graph_without_context(
+                g,
+                min_number_of_activity_vertices,
+                max_number_of_activity_vertices,
+                Arc::clone(&graph_id_generator),
+            )
+        })
+        .collect()
+}
+
+fn _get_fully_connected_candidates_of_graph_without_context(
+    graph: &Graph,
+    min_number_of_vertices: &usize,
+    max_number_of_vertices: &usize,
+    graph_id_generator: Arc<GraphIdGenerator>,
+) -> Vec<Vec<Candidate>> {
+    let mut candidates = Vec::with_capacity(max_number_of_vertices - min_number_of_vertices + 1);
+
+    // Get candidates for the requested number of activity vertices
+    for number_of_activity_vertices in *min_number_of_vertices..(max_number_of_vertices + 1) {
+        let mut candidates_with_n = Vec::new();
+        for comb in graph
+            .vertices
+            .iter()
+            .combinations(number_of_activity_vertices)
+        {
+            let comb_ref: Vec<&Vertex> = comb.into_iter().collect();
+            // Check if the vertices are connected
+            if vertices_are_connected(&comb_ref) {
+                let mut new_candidate = Graph::new(graph_id_generator.next_id());
+                let mut vertex_id_mapping: HashMap<usize, usize> = HashMap::new();
+
+                // Create the vertex
+                for vertex in comb_ref.iter() {
+                    let new_vertex =
+                        new_candidate.create_vertex_with_data(vertex.label, vertex.vertex_type);
+                    vertex_id_mapping.insert(vertex.id, new_vertex.id);
+                }
+                // Create all edges whose endpoints are both within the selected subgraph
+                for vertex in comb_ref.iter() {
+                    for edge in vertex.edges.iter() {
+                        let to_vertex: &Vertex = graph.vertices.get(edge.to).unwrap();
+                        if let Some(&target_id) = vertex_id_mapping.get(&to_vertex.id) {
+                            new_candidate
+                                .vertices
+                                .get_mut(*vertex_id_mapping.get(&vertex.id).unwrap())
+                                .unwrap()
+                                .push(target_id, edge.e_label);
+                        }
+                    }
+                }
+                candidates_with_n.push(Candidate {
+                    n_activity: number_of_activity_vertices,
+                    id_parent: graph.id,
+                    graph: new_candidate,
+                })
+            }
+        }
+        candidates.push(candidates_with_n);
+    }
+    candidates
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -88,10 +88,66 @@ command = [
       "--support-relaxed", "50", 
       "--graph-matching", "cosine",
       "--relaxed-threshold", "0.98",
-      "--min-vertices", "4",
-      "--max-vertices", "4",
+      "--min-vertices", "3",
+      "--max-vertices", "3",
       "--alpha", "0.5",
   # "--compare-only-same-size"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-single-graph]
+command = [
+    "cargo", "run", "--release", "--", 
+      "--input", "test_data/graph_single.txt", 
+      "--activity-vertex-type", "4",
+      "--object-vertex-types", "0", "2", 
+      "--support-exact", "20", 
+      "--support-relaxed", "50", 
+      "--graph-matching", "cosine",
+      "--relaxed-threshold", "0.999",
+      "--min-vertices", "7",
+      "--max-vertices", "7",
+      "--alpha", "0.5"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-big]
+command = [
+    "cargo", "run", "--release", "--", 
+      "--input", "test_data/graphs_big.txt", 
+      "--activity-vertex-type", "3",
+      "--object-vertex-types", "1", 
+      "--support-exact", "20", 
+      "--support-relaxed", "50", 
+      "--graph-matching", "cosine",
+      "--relaxed-threshold", "0.999",
+      "--min-vertices", "3",
+      "--max-vertices", "3",
+      "--alpha", "0.5"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-big-without-context]
+command = [
+    "cargo", "run", "--release", "--", 
+      "--input", "test_data/graphs_big.txt", 
+      "--ignore-vertex-type",
+      "--support-exact", "20", 
+      "--support-relaxed", "50", 
+      "--graph-matching", "cosine",
+      "--relaxed-threshold", "0.999",
+      "--min-vertices", "3",
+      "--max-vertices", "3",
+      "--alpha", "0.5"
     # put launch parameters for your program behind a `--` separator
 ]
 need_stdout = true
@@ -107,6 +163,23 @@ command = [
       "--support-exact", "2", 
       "--support-relaxed", "3", 
       "--graph-matching", "vf2",
+      "--relaxed-threshold", "0.8",
+      "--min-vertices", "3",
+      "--max-vertices", "3"
+    # put launch parameters for your program behind a `--` separator
+]
+need_stdout = true
+allow_warnings = true
+background = true
+
+[jobs.run-small-without-context]
+command = [
+    "cargo", "run", "--release", "--", 
+      "--input", "test_data/graphs_small.txt", 
+      "--ignore-vertex-type", 
+      "--support-exact", "2", 
+      "--support-relaxed", "3", 
+      "--graph-matching", "cosine",
       "--relaxed-threshold", "0.8",
       "--min-vertices", "3",
       "--max-vertices", "3"
@@ -133,7 +206,6 @@ command = [
 need_stdout = true
 allow_warnings = true
 background = true
-
 
 
 [jobs.run-help]
@@ -183,5 +255,6 @@ allow_warnings = true
 # alt-m = "job:my-job"
 c = "job:clippy-all" # comment this to have 'c' run clippy on only the default target
 # p = "job:pedantic" 
-e = "job:run-sim" 
+e = "job:run-big" 
 q = "job:run-help" 
+
